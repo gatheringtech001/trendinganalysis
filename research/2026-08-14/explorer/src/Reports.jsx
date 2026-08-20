@@ -95,7 +95,8 @@ function ReportAnalysisDraft({ job, onReview }) {
     <section className="report-summary"><div><span>REPORT-SPECIFIC ANALYSIS</span>
       <h2>报告专项分析草稿</h2><p>这是为最终视觉诊断 PDF 重新执行的分析，不是旧维度聚合结果。</p></div>
       <dl><div><dt>目标图片</dt><dd>{formatNumber(result.scope?.target_images)}</dd></div>
-        <div><dt>竞品对照</dt><dd>{formatNumber(result.scope?.competitor_images)}</dd></div>
+        <div><dt>竞品全量分母</dt><dd>{formatNumber(result.scope?.competitor_population_images)}</dd></div>
+        <div><dt>竞品高清证据</dt><dd>{formatNumber(result.scope?.competitor_images)}</dd></div>
         <div><dt>PDF Section</dt><dd>{result.sections?.length || 0}</dd></div></dl></section>
     <UsageAudit analysis={job} />
     <section className="report-executive-draft"><h3>执行摘要草稿</h3>
@@ -129,9 +130,11 @@ function StartAnalysis({ disabled, onStart }) {
   return <section className="report-analysis-start">
     <span>ON-DEMAND REPORT ANALYSIS</span><h2>主动生成报告专项分析</h2>
     <p>点击后才会开始：下载 Aloruh 上衣与半身裙全部首图高清版本，逐图使用 GPT-5.6 Sol 分析；
-      另对三家竞品各抽取 12 张作为视觉差距证据。不会直接复用旧的维度结论。</p>
+      三家竞品先按全量视觉维度分布分层，再下载典型图和边界图作为视觉差距证据。不会随机抽图，
+      也不会直接复用旧的维度结论。</p>
     <dl><div><dt>目标范围</dt><dd>Aloruh(SHEIN) · Tops + Skirts · SKU封面图</dd></div>
       <div><dt>成品结构</dt><dd>品牌定位 / 商品展示 / 店铺视觉 / 竞品差距 / 升级方向</dd></div>
+      <div><dt>竞品选图</dt><dd>全量分布 → 品类与视觉维度分层 → 典型图 + 边界图</dd></div>
       <div><dt>证据要求</dt><dd>逐图观察 + 支持图 + 反例图 + 代表图 + 推导方法</dd></div></dl>
     <button disabled={disabled} onClick={onStart} type="button">
       {disabled ? "报告专项分析运行中…" : "开始报告专项分析（会产生费用）"}</button>
@@ -189,7 +192,7 @@ export default function Reports() {
     return () => window.clearTimeout(timer);
   }, [running, generation?.status, generation?.job_id]);
   const start = () => api.startReportAnalysis({ target_store: "aloruh_shein",
-    categories: ["TOPS", "SKIRTS"], competitor_sample_per_store: 12 })
+    categories: ["TOPS", "SKIRTS"] })
     .then((created) => { setJobs((rows) => [created, ...rows]); setSelected(created.job_id); })
     .catch((reason) => setError(reason.message));
   const review = (sectionId, decision, suggestion) => api.reviewReportSection(

@@ -264,7 +264,7 @@ class ReportAnalysisJobs:
         self.active_job_id = None
 
     def submit(self, payload):
-        target_store, categories, competitor_sample = self._validate(payload)
+        target_store, categories = self._validate(payload)
         with self.lock:
             if self.active_job_id:
                 raise AnalysisBusyError("已有报告专项分析或修订任务正在运行")
@@ -274,7 +274,6 @@ class ReportAnalysisJobs:
                 "progress": 0, "created_at": self._now(), "updated_at": self._now(),
                 "scope": {
                     "target_store": target_store, "categories": categories,
-                    "competitor_sample_per_store": competitor_sample,
                 },
             }
             self.jobs[job_id] = job
@@ -341,7 +340,6 @@ class ReportAnalysisJobs:
         args = report_analysis_args(
             db=self.db_path, output=output, target_store=scope["target_store"],
             categories=scope["categories"],
-            competitor_sample_per_store=scope["competitor_sample_per_store"],
         )
         try:
             result_dir = self.runner(
@@ -396,20 +394,17 @@ class ReportAnalysisJobs:
     @staticmethod
     def _validate(payload):
         if not isinstance(payload, dict) or set(payload) - {
-            "target_store", "categories", "competitor_sample_per_store",
+            "target_store", "categories",
         }:
             raise ValueError("报告专项分析请求格式不正确")
         target = payload.get("target_store", "aloruh_shein")
         categories = payload.get("categories", ["TOPS", "SKIRTS"])
-        sample = payload.get("competitor_sample_per_store", 12)
         if target != "aloruh_shein":
             raise ValueError("当前成品报告模板只支持Aloruh(SHEIN)")
         if (not isinstance(categories, list) or not categories
                 or set(categories) - {"TOPS", "SKIRTS"}):
             raise ValueError("报告品类只支持TOPS与SKIRTS")
-        if isinstance(sample, bool) or not isinstance(sample, int) or not 1 <= sample <= 24:
-            raise ValueError("竞品每店样本数必须为1-24")
-        return target, list(dict.fromkeys(categories)), sample
+        return target, list(dict.fromkeys(categories))
 
     def _update_revision(self, job_id, **values):
         with self.lock:

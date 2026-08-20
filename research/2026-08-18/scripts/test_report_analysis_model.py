@@ -1,6 +1,10 @@
+import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
 
 from report_analysis_model import SECTION_IDS, observation_schema, report_schema
+from report_analysis_runner import SELECTION_DIMENSIONS, _select_rows
 
 
 class ReportAnalysisModelTest(unittest.TestCase):
@@ -24,6 +28,95 @@ class ReportAnalysisModelTest(unittest.TestCase):
         claim = sections["items"]["properties"]["claims"]["items"]
         self.assertIn("derivation", claim["required"])
         self.assertIn("counterexample_image_ids", claim["properties"]["evidence"]["required"])
+
+    def test_competitor_evidence_uses_full_dimension_strata(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            db_path = Path(temporary) / "selection.db"
+            self._build_selection_database(db_path)
+
+            rows, plan = _select_rows(db_path, "aloruh_shein", ["TOPS", "SKIRTS"])
+
+        target = [row for row in rows if row["role"] == "target"]
+        competitor = [row for row in rows if row["role"] == "competitor"]
+        self.assertEqual(2, len(target))
+        self.assertEqual(
+            sum(row["selected_images"] for row in plan["stores"].values()),
+            len(competitor),
+        )
+        self.assertEqual("dimension_stratified", plan["method"])
+        self.assertEqual(list(SELECTION_DIMENSIONS), plan["dimensions"])
+        for store in ("princess_polly", "motel", "prettylittlething"):
+            store_plan = plan["stores"][store]
+            self.assertEqual(8, store_plan["population_images"])
+            self.assertEqual(8, store_plan["analyzed_images"])
+            self.assertGreater(store_plan["selected_images"], 0)
+            self.assertEqual(4, store_plan["categories"]["TOPS"]["population_images"])
+            self.assertIn("scene", store_plan["categories"]["TOPS"]["dimensions"])
+            self.assertTrue(store_plan["categories"]["TOPS"]["visual_clusters"])
+        self.assertTrue(all(row["selection_reasons"] for row in competitor))
+        self.assertTrue(any(
+            reason["evidence_role"] == "boundary"
+            for row in competitor for reason in row["selection_reasons"]
+        ))
+        self.assertTrue(any(
+            reason.get("selection_lens") == "combined_visual_cluster"
+            for row in competitor for reason in row["selection_reasons"]
+        ))
+
+    def test_competitor_evidence_rejects_incomplete_dimension_coverage(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            db_path = Path(temporary) / "selection.db"
+            self._build_selection_database(db_path, omit=("motel", "motel-tops-4", "scene"))
+
+            with self.assertRaisesRegex(ValueError, "incomplete visual-dimension coverage"):
+                _select_rows(db_path, "aloruh_shein", ["TOPS", "SKIRTS"])
+
+    @staticmethod
+    def _build_selection_database(db_path, omit=None):
+        connection = sqlite3.connect(db_path)
+        connection.executescript("""
+            CREATE TABLE products (
+                store_id TEXT, product_id TEXT, title TEXT, category TEXT,
+                category_group TEXT, catalog_rank INTEGER
+            );
+            CREATE TABLE images (
+                store_id TEXT, product_id TEXT, position INTEGER, source_url TEXT
+            );
+            CREATE TABLE image_analysis_tags (
+                store_id TEXT, product_id TEXT, position INTEGER,
+                dimension TEXT, tag TEXT, confidence REAL
+            );
+        """)
+        stores = ("princess_polly", "motel", "prettylittlething")
+        products = [("aloruh_shein", "target-top", "TOPS", 1),
+                    ("aloruh_shein", "target-skirt", "SKIRTS", 2)]
+        for store in stores:
+            for category in ("TOPS", "SKIRTS"):
+                for index in range(1, 5):
+                    products.append((store, f"{store}-{category.lower()}-{index}", category, index))
+        for store, product_id, category, rank in products:
+            connection.execute(
+                "INSERT INTO products VALUES(?,?,?,?,?,?)",
+                (store, product_id, product_id, category, category, rank),
+            )
+            connection.execute(
+                "INSERT INTO images VALUES(?,?,1,?)",
+                (store, product_id, f"https://images.example/{product_id}.jpg"),
+            )
+            if store == "aloruh_shein":
+                continue
+            index = int(product_id.rsplit("-", 1)[-1])
+            for dimension in SELECTION_DIMENSIONS:
+                if omit == (store, product_id, dimension):
+                    continue
+                tag = f"{dimension}-common" if index <= 3 else f"{dimension}-boundary"
+                confidence = 0.95 if index == 1 else 0.85
+                connection.execute(
+                    "INSERT INTO image_analysis_tags VALUES(?,?,?,?,?,?)",
+                    (store, product_id, 1, dimension, tag, confidence),
+                )
+        connection.commit()
+        connection.close()
 
 
 if __name__ == "__main__":

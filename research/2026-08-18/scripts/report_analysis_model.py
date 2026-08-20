@@ -179,6 +179,7 @@ class AzureOpenAIReportAnalyzer:
             context = {
                 key: item[key] for key in (
                     "image_id", "store_id", "product_id", "category", "role",
+                    "selection_reasons",
                 )
             }
             content.extend([
@@ -286,6 +287,7 @@ class AzureOpenAIReportAnalyzer:
             "你是女装品牌视觉诊断分析师。逐张分析高清商品图，先记录肉眼可见事实，再写优缺点。"
             "不得使用销量、曝光、点击、转化或ROI，不得推断敏感属性。旧分类标签仅是上下文，"
             "不能替代本次观察。证据线索必须能在图片中复核。竞品图只用于对照，不代表目标店铺。"
+            "竞品图由全量视觉维度分布分层选出；selection_reasons说明其典型或边界证据角色。"
         )
 
     @staticmethod
@@ -295,6 +297,8 @@ class AzureOpenAIReportAnalyzer:
             "基于逐图观察与批次模式，生成模仿品牌视觉诊断成品PDF结构的专项分析草稿。"
             "每条结论必须说明推导方法，列支持图、反例图、代表图、样本数和观察字段；"
             "不得引用未提供的图片ID。目标店铺全量图片用于结论，竞品抽样只用于视觉差距。"
+            "竞品模式判断必须以competitor_evidence中的全量维度分布为分母，高清代表图只用于"
+            "复核典型模式与边界反例，不得把代表图数量冒充全量占比。"
             "不得写销售、流量、点击、转化或ROI结论。五个章节必须各出现一次："
             f"{roles}。范围：{json.dumps(scope, ensure_ascii=False)}"
         )
