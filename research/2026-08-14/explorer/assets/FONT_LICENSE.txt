@@ -1,0 +1,12 @@
+Noto Sans SC font subset
+
+Copyright 2014-2021 Adobe, with Reserved Font Name "Source".
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+It is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+ANY KIND, either express or implied.
+
+License text and terms: https://openfontlicense.org/open-font-license-official-text/
+
+The bundled TTF is a static, Unicode-subsetted derivative used only to embed
+consistent Simplified Chinese glyphs in generated PDF reports.
