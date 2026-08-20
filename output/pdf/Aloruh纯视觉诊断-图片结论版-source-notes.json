@@ -2,8 +2,8 @@
   "report_id": "aloruh-visual-diagnostic-2026-08-20",
   "report_type": "final_visual",
   "title": "Aloruh 店铺视觉诊断",
-  "generated_at": "2026-08-20T18:01:45.260838+00:00",
-  "pages": 41,
+  "generated_at": "2026-08-20T18:35:18.499168+00:00",
+  "pages": 53,
   "sample_count": 386,
   "summary": [
     "本草稿按成品PDF逻辑组织，诊断范围为 aloruh_shein 的 TOPS、SKIRTS 全量386张目标店铺图片；竞品结论仅置于“竞品视觉差距”，并以三家竞品全量15,107张的维度分布为分母。",
@@ -28303,15 +28303,357 @@
   },
   "image_failures": [],
   "layout_contract": {
-    "version": "editorial-image-first-v1",
+    "version": "reference-53-page-v1",
     "reference_sha256": "33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253",
     "reference_pages": 53,
     "reference_page_size": [
       1920,
       1080
     ],
-    "design_language": "black-white-sand editorial image-first",
-    "claim_layout": "editorial hero followed by complete image evidence",
+    "design_language": "53-page black-white image-led reference sequence",
+    "claim_layout": "reference page-for-page conclusion presentation",
+    "page_sequence": [
+      {
+        "page": 1,
+        "kind": "cover",
+        "section": null,
+        "title": "ALORUH"
+      },
+      {
+        "page": 2,
+        "kind": "divider",
+        "section": "brand_positioning",
+        "title": "Visual Positioning Calibration"
+      },
+      {
+        "page": 3,
+        "kind": "statement",
+        "section": "brand_positioning",
+        "title": "Brand Name"
+      },
+      {
+        "page": 4,
+        "kind": "dark_collage",
+        "section": "brand_positioning",
+        "title": "Bestsellers 畅销风貌"
+      },
+      {
+        "page": 5,
+        "kind": "dark_collage",
+        "section": "brand_positioning",
+        "title": "Bestsellers 畅销风貌"
+      },
+      {
+        "page": 6,
+        "kind": "mosaic",
+        "section": "brand_positioning",
+        "title": "CURRENT VISUAL ASSETS"
+      },
+      {
+        "page": 7,
+        "kind": "divider",
+        "section": "product_display",
+        "title": "PRODUCT DISPLAY ANALYSIS"
+      },
+      {
+        "page": 8,
+        "kind": "scope",
+        "section": "product_display",
+        "title": "不是缺少好图，而是缺少可复制的图法系统"
+      },
+      {
+        "page": 9,
+        "kind": "hero_collage",
+        "section": "product_display",
+        "title": "TOPS · 设计点读取快，比例易受姿势影响"
+      },
+      {
+        "page": 10,
+        "kind": "hero_collage",
+        "section": "product_display",
+        "title": "SKIRTS · 动态摆量清楚，静态信息不足"
+      },
+      {
+        "page": 11,
+        "kind": "method",
+        "section": "product_display",
+        "title": "分析口径：不同画面回答不同问题"
+      },
+      {
+        "page": 12,
+        "kind": "traits",
+        "section": "product_display",
+        "title": "高效首图共性：第一眼给出停留理由"
+      },
+      {
+        "page": 13,
+        "kind": "feature",
+        "section": "product_display",
+        "title": "重点提升款：商品有吸引力，首图信息仍不足"
+      },
+      {
+        "page": 14,
+        "kind": "matrix",
+        "section": "product_display",
+        "title": "每个品类固定 构图 - 动作 - 卖点 - 场景"
+      },
+      {
+        "page": 15,
+        "kind": "divider",
+        "section": "store_visual_audit",
+        "title": "STORE VISUAL AUDIT"
+      },
+      {
+        "page": 16,
+        "kind": "logic",
+        "section": "store_visual_audit",
+        "title": "Store Display Logic"
+      },
+      {
+        "page": 17,
+        "kind": "mosaic",
+        "section": "store_visual_audit",
+        "title": "摄影视觉风格"
+      },
+      {
+        "page": 18,
+        "kind": "quote",
+        "section": "store_visual_audit",
+        "title": "Clarify occasions, strengthen hero images, and improve browsing efficiency."
+      },
+      {
+        "page": 19,
+        "kind": "mosaic",
+        "section": "store_visual_audit",
+        "title": "摄影视觉风格"
+      },
+      {
+        "page": 20,
+        "kind": "mosaic",
+        "section": "store_visual_audit",
+        "title": "摄影视觉风格"
+      },
+      {
+        "page": 21,
+        "kind": "quote",
+        "section": "store_visual_audit",
+        "title": "统一场景入口，强化首图吸引力，提升店铺浏览效率。"
+      },
+      {
+        "page": 22,
+        "kind": "dense_mosaic",
+        "section": "store_visual_audit",
+        "title": "First Image Types"
+      },
+      {
+        "page": 23,
+        "kind": "three_compare",
+        "section": "store_visual_audit",
+        "title": "First Image Types"
+      },
+      {
+        "page": 24,
+        "kind": "dense_mosaic",
+        "section": "store_visual_audit",
+        "title": "STANDARDIZED NARRATIVE"
+      },
+      {
+        "page": 25,
+        "kind": "three_compare",
+        "section": "store_visual_audit",
+        "title": "Fabric details & icons"
+      },
+      {
+        "page": 26,
+        "kind": "divider",
+        "section": "competitive_gap",
+        "title": "Visual Discrepancy Breakdown"
+      },
+      {
+        "page": 27,
+        "kind": "brand_codes",
+        "section": "competitive_gap",
+        "title": "BRAND VISUAL CODES"
+      },
+      {
+        "page": 28,
+        "kind": "brand_feature",
+        "section": "competitive_gap",
+        "title": "PRINCESS POLLY"
+      },
+      {
+        "page": 29,
+        "kind": "dense_mosaic",
+        "section": "competitive_gap",
+        "title": "PRINCESS POLLY"
+      },
+      {
+        "page": 30,
+        "kind": "mosaic",
+        "section": "competitive_gap",
+        "title": "视觉基调：网感与商品可读性平衡"
+      },
+      {
+        "page": 31,
+        "kind": "dense_mosaic",
+        "section": "competitive_gap",
+        "title": "Model Faces"
+      },
+      {
+        "page": 32,
+        "kind": "mosaic",
+        "section": "competitive_gap",
+        "title": "DAILY 视觉语言"
+      },
+      {
+        "page": 33,
+        "kind": "mosaic",
+        "section": "competitive_gap",
+        "title": "PARTY 视觉语言"
+      },
+      {
+        "page": 34,
+        "kind": "mosaic",
+        "section": "competitive_gap",
+        "title": "SWIM 视觉语言"
+      },
+      {
+        "page": 35,
+        "kind": "brand_feature",
+        "section": "competitive_gap",
+        "title": "MOTEL ROCKS"
+      },
+      {
+        "page": 36,
+        "kind": "mosaic",
+        "section": "competitive_gap",
+        "title": "视觉基调：标准化商品摄影"
+      },
+      {
+        "page": 37,
+        "kind": "brand_feature",
+        "section": "competitive_gap",
+        "title": "PRETTYLITTLETHING"
+      },
+      {
+        "page": 38,
+        "kind": "mosaic",
+        "section": "competitive_gap",
+        "title": "视觉基调：按品类固定构图"
+      },
+      {
+        "page": 39,
+        "kind": "roadmap",
+        "section": "competitive_gap",
+        "title": "从单张好图升级为分品类主图模板"
+      },
+      {
+        "page": 40,
+        "kind": "divider",
+        "section": "visual_upgrade",
+        "title": "VISUAL UPGRADE DIRECTION"
+      },
+      {
+        "page": 41,
+        "kind": "brand_feature",
+        "section": "visual_upgrade",
+        "title": "STANDARDIZED TRY-ON"
+      },
+      {
+        "page": 42,
+        "kind": "dense_mosaic",
+        "section": "visual_upgrade",
+        "title": "ALORUH 视觉系列画像"
+      },
+      {
+        "page": 43,
+        "kind": "quote",
+        "section": "visual_upgrade",
+        "title": "从 拍商品 转向 追趋势、做搭配、造氛围"
+      },
+      {
+        "page": 44,
+        "kind": "four_series",
+        "section": "visual_upgrade",
+        "title": "3-1 系列线视觉规划"
+      },
+      {
+        "page": 45,
+        "kind": "mosaic",
+        "section": "visual_upgrade",
+        "title": "现有休闲货盘风貌"
+      },
+      {
+        "page": 46,
+        "kind": "mosaic",
+        "section": "visual_upgrade",
+        "title": "visual tone"
+      },
+      {
+        "page": 47,
+        "kind": "flow",
+        "section": "visual_upgrade",
+        "title": "用趋势搭配带动氛围首图点击"
+      },
+      {
+        "page": 48,
+        "kind": "three_compare",
+        "section": "visual_upgrade",
+        "title": "网感首图优化对比"
+      },
+      {
+        "page": 49,
+        "kind": "four_compare",
+        "section": "visual_upgrade",
+        "title": "搭配调整对比"
+      },
+      {
+        "page": 50,
+        "kind": "grid_compare",
+        "section": "visual_upgrade",
+        "title": "BEFORE"
+      },
+      {
+        "page": 51,
+        "kind": "grid_compare",
+        "section": "visual_upgrade",
+        "title": "AFTER"
+      },
+      {
+        "page": 52,
+        "kind": "plan",
+        "section": "visual_upgrade",
+        "title": "PLAN A"
+      },
+      {
+        "page": 53,
+        "kind": "plan",
+        "section": "visual_upgrade",
+        "title": "PLAN B"
+      }
+    ],
+    "section_page_order": [
+      [
+        2,
+        "brand_positioning"
+      ],
+      [
+        7,
+        "product_display"
+      ],
+      [
+        15,
+        "store_visual_audit"
+      ],
+      [
+        26,
+        "competitive_gap"
+      ],
+      [
+        40,
+        "visual_upgrade"
+      ]
+    ],
     "displayed_evidence_image_ids": [
       "00a45bc9a35520ed1bc1",
       "068f1cd68b571949f9a1",
