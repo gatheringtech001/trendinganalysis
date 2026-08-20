@@ -1,273 +1,219 @@
-import React, { memo, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { api, formatNumber, stores } from "./api";
-import { CompletedAnalysis } from "./DetailedVisualAnalysis";
-import { dimensionLabels, formatAnalysisTag } from "./imageAnalysis";
 import ProductImage from "./Media";
 
-const tabs = { detailed: "1. Detailed 审核", final: "2. 最终报告" };
-const generationStages = {
-  queued: "排队中", aggregating: "聚合分析数据", downloading_evidence_images: "获取证据图片",
-  rendering_sections: "生成报告章节", rendering_evidence_appendix: "生成证据附录",
-  publishing: "发布报告文件", complete: "生成完成", failed: "生成失败",
+const stageLabels = {
+  queued: "等待开始", selecting_images: "确定报告图片范围",
+  downloading_hd_images: "下载高清证据图片", analyzing_all_images: "逐张视觉分析",
+  synthesizing_report_sections: "生成五个报告章节", report_analysis_complete: "专项分析完成",
+  revising_section: "按修改建议重新分析Section", revision_complete: "Section修订完成",
+  rendering_cover: "排版封面", rendering_sections: "排版报告章节",
+  rendering_evidence_appendix: "排版逐图证据附录", publishing: "发布PDF",
+  complete: "完成", failed: "失败",
 };
 
-function EvidenceDetails({ evidence, title = "查看完整证据链" }) {
-  const filters = Object.entries(evidence?.filters || {});
-  return (
-    <details className="report-evidence">
-      <summary>{title}</summary>
-      <div className="evidence-meta">
-        <span><b>方法</b>{evidence?.analysis_method || "—"}</span>
-        <span><b>样本</b>{formatNumber(evidence?.sample_count)} 张</span>
-        <span><b>源记录</b>{formatNumber(evidence?.source_records?.length)} 条</span>
-      </div>
-      <div className="evidence-filters">
-        {filters.map(([key, value]) => (
-          <span key={key}>{dimensionLabels[key] || key}：{
-            (Array.isArray(value) ? value : [value]).map(formatAnalysisTag).join("、")
-          }</span>
-        ))}
-      </div>
-      {evidence?.metrics?.length ? <div className="evidence-metrics">
-        {evidence.metrics.map((metric, index) => (
-          <span key={`${metric.name || metric.label || metric.row}-${index}`}>
-            <b>{formatAnalysisTag(metric.name || metric.label || `${metric.row} × ${metric.column}`)}</b>
-            {formatNumber(metric.value ?? metric.count)}
-          </span>
-        ))}
-      </div> : null}
-      {evidence?.images?.length ? <div className="evidence-images">
-        {evidence.images.map((image) => (
-          <article key={`${image.product_id}-${image.image_url}`}>
-            <ProductImage alt={image.title} src={image.image_url} />
-            <span>{image.product_id}</span>
-          </article>
-        ))}
-      </div> : null}
-      <details className="source-record-list">
-        <summary>全部 {formatNumber(evidence?.source_records?.length)} 条源记录ID</summary>
-        <code>{(evidence?.source_records || []).join("\n")}</code>
-      </details>
-    </details>
-  );
+function UsageRow({ label, usage }) {
+  return <div><strong>{label}</strong><span>{formatNumber(usage?.total_tokens)} Token</span>
+    <span>${Number(usage?.estimated_cost_usd || 0).toFixed(4)}</span>
+    <span>{Number(usage?.wall_clock_seconds || 0).toFixed(1)} 秒</span></div>;
 }
 
-const ReportSection = memo(function ReportSection({ section }) {
-  return (
-    <section className="report-section">
-      <header><span>SECTION</span><h3>{section.title}</h3><p>{section.description}</p></header>
-      <EvidenceDetails evidence={section.evidence} title="查看Section证据范围" />
-      <div className="report-claims">
-        {section.claims.map((claim) => (
-          <article key={claim.claim_id}>
-            <span>结论</span><p>{claim.conclusion}</p>
-            <EvidenceDetails evidence={claim.evidence} />
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-});
-
-function AttentionHeatmap({ data }) {
-  const max = Math.max(...(data?.cells || []).map((cell) => cell.count), 1);
-  return (
-    <section className="report-visual-card">
-      <header><span>VISUAL ATTENTION</span><h3>视觉焦点热力图</h3></header>
-      <div className="attention-map" aria-label="视觉焦点身体区域热力图">
-        <div className="body-outline" />
-        {(data?.cells || []).map((cell) => (
-          <span key={cell.label} style={{ left: `${cell.x}%`, top: `${cell.y}%`,
-            "--heat": cell.count / max, "--size": `${24 + 34 * cell.count / max}px` }}
-            title={`${formatAnalysisTag(cell.label)}：${cell.count}张`}>
-            {formatAnalysisTag(cell.label)}<b>{cell.count}</b>
-          </span>
-        ))}
-      </div>
-      <p>热度表示该区域被selling_points标签覆盖的图片数，不代表销量或商业热度。</p>
-    </section>
-  );
-}
-
-function CombinationHeatmap({ data }) {
-  const cells = data?.cells || [];
-  const lookup = useMemo(() => new Map(
-    cells.map((cell) => [`${cell.row}:${cell.column}`, cell.count]),
-  ), [cells]);
-  const max = Math.max(...cells.map((cell) => cell.count), 1);
-  return (
-    <section className="report-visual-card combination-card">
-      <header><span>CO-OCCURRENCE</span><h3>维度组合热力图</h3></header>
-      <div className="combination-scroll"><table><thead><tr><th>构图 × 动作</th>
-        {(data?.columns || []).map((column) => <th key={column}>{formatAnalysisTag(column)}</th>)}
-      </tr></thead><tbody>{(data?.rows || []).map((row) => <tr key={row}>
-        <th>{formatAnalysisTag(row)}</th>
-        {(data?.columns || []).map((column) => {
-          const count = lookup.get(`${row}:${column}`) || 0;
-          return <td key={column} style={{ "--heat": count / max }}>{count}</td>;
-        })}
-      </tr>)}</tbody></table></div>
-      <p>每个单元格是构图与动作标签在同一张图片中的共现次数。</p>
-    </section>
-  );
-}
-
-function SourceRecordAppendix({ records }) {
-  return <section className="source-record-appendix">
-    <header><span>DATA EVIDENCE</span><h3>证据数据明细 · {formatNumber(records.length)} 条</h3>
-      <p>记录ID与每个Section、Claim证据链中的source_records一一对应。</p></header>
-    <div className="source-record-table"><table><thead><tr><th>证据图片</th><th>记录ID</th>
-      <th>类别</th><th>分析方法</th><th>维度标签</th><th>平均置信度</th></tr></thead>
-      <tbody>{records.map((record) => {
-        const confidence = Object.values(record.confidence || {});
-        const average = confidence.length
-          ? confidence.reduce((sum, value) => sum + Number(value), 0) / confidence.length : 0;
-        return <tr key={record.record_id}><td>{record.image
-          ? <ProductImage alt={record.image.title} src={record.image.image_url} /> : "—"}</td>
-          <td><code>{record.record_id}</code><small>{record.image?.product_id}</small></td>
-          <td>{formatAnalysisTag(record.category)}</td><td>{record.analysis_method}</td>
-          <td>{Object.entries(record.tags || {}).map(([dimension, values]) =>
-            `${dimensionLabels[dimension] || dimension}：${values.map(formatAnalysisTag).join("、")}`,
-          ).join("；")}</td><td>{Math.round(average * 100)}%</td></tr>;
-      })}</tbody></table></div>
-  </section>;
-}
-
-function UsageAudit({ generation, detailed }) {
-  const upstream = generation?.result?.upstream_detailed_usage || detailed?.usage || {};
-  const pdfUsage = generation?.result?.usage || {};
+function UsageAudit({ analysis, generation }) {
   return <section className="generation-usage-audit">
-    <div><strong>上游 Detailed 分析</strong><span>{formatNumber(upstream.total_tokens)} Token</span>
-      <span>${Number(upstream.estimated_cost_usd || 0).toFixed(4)}</span></div>
-    <div><strong>最终 PDF 生成</strong><span>{formatNumber(pdfUsage.total_tokens)} Token</span>
-      <span>${Number(pdfUsage.estimated_cost_usd || 0).toFixed(4)}</span></div>
-    <p>最终 PDF 仅做本地排版，不调用模型；费用不会重复计算。</p>
+    <UsageRow label="报告专项视觉分析" usage={analysis?.usage} />
+    <UsageRow label="Section 修订（累计）" usage={analysis?.revision_usage} />
+    <UsageRow label="最终 PDF 本地排版" usage={generation?.result?.usage} />
+    <p>三部分独立计量；最终 PDF 排版不调用模型，Token 与费用均为 0。</p>
   </section>;
 }
 
-function FinalReport({ detailed, report, generation, onGenerate }) {
-  const [showRecords, setShowRecords] = useState(false);
-  if (!report) return <div className="loading">正在生成可追溯报告视图…</div>;
-  const fileUrl = api.reportFileUrl(report.report_id);
-  return <div className="final-report">
-    <section className="report-summary">
-      <div><span>FINAL VISUAL DIAGNOSIS</span><h2>{report.title}</h2><p>{report.summary}</p></div>
-      <dl><div><dt>样本</dt><dd>{formatNumber(report.sample_count)}</dd></div>
-        <div><dt>维度</dt><dd>{report.dimension_coverage.target}</dd></div>
-        <div><dt>Section</dt><dd>{report.sections.length}</dd></div></dl>
-      <div className="report-file-actions">
-        <button disabled={["queued", "running"].includes(generation?.status)}
-          onClick={onGenerate} type="button">
-          {["queued", "running"].includes(generation?.status) ? "正在生成…" : "生成最终报告"}
-        </button>
-        {report.has_pdf ? <><a href={fileUrl} target="_blank" rel="noreferrer">浏览PDF</a>
-          <a download href={fileUrl}>下载PDF</a></> : null}
-      </div>
-    </section>
-    <section className="approved-detailed-source"><strong>已通过审核的 Detailed 报告</strong>
-      <code>{detailed?.job_id}</code><span>7 / 7 Section 满意</span></section>
-    <UsageAudit detailed={detailed} generation={generation} />
-    {generation ? <section className={`report-generation ${generation.status}`}>
-      <div><strong>{generationStages[generation.stage] || generation.stage}</strong>
-        <span>{generation.progress || 0}%</span></div>
-      <progress max="100" value={generation.progress || 0} />
-      {generation.error ? <p>{generation.error}</p> : null}
-      {generation.status === "complete" ? <p>
-        已按当前数据重新生成 {generation.result?.pages} 页报告，覆盖
-        {formatNumber(generation.result?.sample_count)} 张图片。
-      </p> : null}
-    </section> : null}
-    <div className="report-heatmaps"><AttentionHeatmap data={report.attention_heatmap} />
-      <CombinationHeatmap data={report.combination_heatmap} /></div>
-    <div className="report-sections">{report.sections.map((section) => (
-      <ReportSection key={section.section_id} section={section} />
-    ))}</div>
-    <button className="source-record-toggle" onClick={() => setShowRecords((value) => !value)} type="button">
-      {showRecords ? "收起证据数据明细" : `打开证据数据明细（${formatNumber(report.source_records.length)}条）`}
-    </button>
-    {showRecords ? <SourceRecordAppendix records={report.source_records} /> : null}
+function ImageStrip({ ids, imageLookup }) {
+  return <div className="evidence-images">{ids.map((id) => {
+    const image = imageLookup.get(id);
+    return image ? <article key={id}><ProductImage alt={image.title} src={image.resolved_url} />
+      <span>{id}</span><small>{stores[image.store_id] || image.store_id}</small></article> : null;
+  })}</div>;
+}
+
+function ClaimEvidence({ claim, imageLookup }) {
+  const evidence = claim.evidence || {};
+  return <article className="report-claim">
+    <span>结论</span><h4>{claim.conclusion}</h4>
+    <div className="claim-derivation"><strong>怎么得到的</strong><p>{claim.derivation}</p></div>
+    <dl className="claim-evidence-meta">
+      <div><dt>分析覆盖</dt><dd>{formatNumber(evidence.sample_count)} 张</dd></div>
+      <div><dt>筛选条件</dt><dd>{evidence.filters}</dd></div>
+      <div><dt>观察字段</dt><dd>{(evidence.observation_fields || []).join("、")}</dd></div>
+      <div><dt>支持 / 反例</dt><dd>{evidence.support_image_ids?.length || 0} / {evidence.counterexample_image_ids?.length || 0}</dd></div>
+    </dl>
+    <strong className="evidence-subtitle">代表性证据图片</strong>
+    <ImageStrip ids={evidence.example_image_ids || []} imageLookup={imageLookup} />
+    <details className="source-record-list"><summary>查看全部支持与反例图片ID</summary>
+      <p><b>支持：</b>{(evidence.support_image_ids || []).join("、")}</p>
+      <p><b>反例：</b>{(evidence.counterexample_image_ids || []).join("、") || "无"}</p>
+    </details>
+  </article>;
+}
+
+function SectionReview({ job, onReview, section }) {
+  const current = job.review?.sections?.[section.section_id] || {};
+  const revising = job.revision?.section_id === section.section_id
+    && ["queued", "running"].includes(job.revision?.status || "");
+  const [showSuggestion, setShowSuggestion] = useState(false);
+  const [suggestion, setSuggestion] = useState("");
+  return <div className={`section-review ${current.decision || "pending"}`}>
+    <div><strong>这个 PDF Section 的分析与证据是否满意？</strong>
+      <span>{revising ? "正在按建议重新分析" : current.decision === "up" ? "已通过" : "待审核"}</span></div>
+    <div className="section-review-actions">
+      <button disabled={revising} onClick={() => onReview(section.section_id, "up", "")} type="button">👍 满意</button>
+      <button disabled={revising} onClick={() => setShowSuggestion(true)} type="button">👎 不满意</button>
+    </div>
+    {showSuggestion ? <div className="section-review-suggestion">
+      <label htmlFor={`suggestion-${section.section_id}`}>修改建议（会触发该Section重新分析）</label>
+      <textarea id={`suggestion-${section.section_id}`} maxLength="2000" value={suggestion}
+        onChange={(event) => setSuggestion(event.target.value)} />
+      <button disabled={!suggestion.trim() || revising}
+        onClick={() => onReview(section.section_id, "down", suggestion).then(() => {
+          setShowSuggestion(false); setSuggestion("");
+        })} type="button">提交并重新分析</button>
+    </div> : null}
+    {revising ? <progress max="100" value={job.revision.progress || 0} /> : null}
+    {job.revision?.section_id === section.section_id && job.revision?.status === "failed"
+      ? <p className="error-banner">修订失败：{job.revision.error}</p> : null}
   </div>;
 }
 
-function DetailedReports({ onReady, onReview, onSelect, reviewSaving, rows, selected }) {
-  const job = rows.find((row) => row.job_id === selected);
-  if (!rows.length) return <div className="empty-results">还没有已保存的Detailed高清分析任务。</div>;
-  return <div className="detailed-report-history">
-    <aside>{rows.map((row) => <button className={selected === row.job_id ? "active" : ""}
-      key={row.job_id} onClick={() => onSelect(row.job_id)} type="button">
-      <strong>{Object.values(row.filters || {}).map(formatAnalysisTag).join(" · ") || "自定义选图"}</strong>
-      <span>{(row.stores || []).map((store) => stores[store] || store).join("、")}</span>
-      <small>{row.status === "complete" ? `审核 ${row.review?.approved_sections || 0} / ${row.review?.total_sections || 7}` : row.status}</small>
-    </button>)}</aside>
-    <main>{job ? <><section className={`review-workflow ${job.review?.ready_for_final ? "ready" : "pending"}`}>
-      <div><strong>Detailed Section 审核</strong><span>
-        已审核 {job.review?.reviewed_sections || 0} / {job.review?.total_sections || 7}，
-        满意 {job.review?.approved_sections || 0} / {job.review?.total_sections || 7}
-      </span></div>
-      {job.review?.rejected_sections ? <p>有 {job.review.rejected_sections} 个 Section 待按建议修订，最终报告暂时锁定。</p> : null}
-      {job.review?.ready_for_final ? <button onClick={onReady} type="button">进入最终报告生成</button>
-        : <p>请逐项审核下方全部 Section；只有全部 👍 满意后才能生成最终报告。</p>}
-    </section><CompletedAnalysis job={job} onReview={(sectionId, decision, suggestion) =>
-      onReview(job.job_id, sectionId, decision, suggestion)} reviewSaving={reviewSaving} /></> : null}</main>
+function ReportAnalysisDraft({ job, onReview }) {
+  const result = job.result || {};
+  const imageLookup = useMemo(() => new Map(
+    (result.images || []).map((image) => [image.image_id, image]),
+  ), [result.images]);
+  const observationLookup = useMemo(() => new Map(
+    (result.image_observations || []).map((row) => [row.image_id, row]),
+  ), [result.image_observations]);
+  return <div className="report-analysis-draft">
+    <section className="report-summary"><div><span>REPORT-SPECIFIC ANALYSIS</span>
+      <h2>报告专项分析草稿</h2><p>这是为最终视觉诊断 PDF 重新执行的分析，不是旧维度聚合结果。</p></div>
+      <dl><div><dt>目标图片</dt><dd>{formatNumber(result.scope?.target_images)}</dd></div>
+        <div><dt>竞品对照</dt><dd>{formatNumber(result.scope?.competitor_images)}</dd></div>
+        <div><dt>PDF Section</dt><dd>{result.sections?.length || 0}</dd></div></dl></section>
+    <UsageAudit analysis={job} />
+    <section className="report-executive-draft"><h3>执行摘要草稿</h3>
+      <ul>{(result.executive_summary || []).map((item) => <li key={item}>{item}</li>)}</ul></section>
+    <div className="report-sections">{(result.sections || []).map((section) =>
+      <section className="report-section" key={section.section_id}>
+        <header><span>PDF SECTION</span><h3>{section.title}</h3><p>{section.summary}</p>
+          <small>方法：{section.methodology}</small></header>
+        <div className="report-claims">{section.claims.map((claim) =>
+          <ClaimEvidence claim={claim} imageLookup={imageLookup} key={claim.claim_id} />)}</div>
+        <SectionReview job={job} onReview={onReview} section={section} />
+      </section>)}</div>
+    <details className="image-observation-appendix"><summary>
+      查看全部逐图分析（{formatNumber(result.image_observations?.length)} 张）</summary>
+      <div className="observation-grid">{(result.images || []).map((image) => {
+        const observation = observationLookup.get(image.image_id) || {};
+        return <article key={image.image_id}><ProductImage alt={image.title} src={image.resolved_url} />
+          <div><code>{image.image_id}</code><strong>{stores[image.store_id] || image.store_id}</strong>
+            <p>{observation.visual_role}</p>
+            <details><summary>肉眼可见事实与证据线索</summary>
+              <dl>{Object.entries(observation.observable || {}).map(([key, value]) =>
+                <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
+              <ul>{(observation.evidence_cues || []).map((cue) => <li key={cue}>{cue}</li>)}</ul>
+            </details></div></article>;
+      })}</div>
+    </details>
+  </div>;
+}
+
+function StartAnalysis({ disabled, onStart }) {
+  return <section className="report-analysis-start">
+    <span>ON-DEMAND REPORT ANALYSIS</span><h2>主动生成报告专项分析</h2>
+    <p>点击后才会开始：下载 Aloruh 上衣与半身裙全部首图高清版本，逐图使用 GPT-5.6 Sol 分析；
+      另对三家竞品各抽取 12 张作为视觉差距证据。不会直接复用旧的维度结论。</p>
+    <dl><div><dt>目标范围</dt><dd>Aloruh(SHEIN) · Tops + Skirts · SKU封面图</dd></div>
+      <div><dt>成品结构</dt><dd>品牌定位 / 商品展示 / 店铺视觉 / 竞品差距 / 升级方向</dd></div>
+      <div><dt>证据要求</dt><dd>逐图观察 + 支持图 + 反例图 + 代表图 + 推导方法</dd></div></dl>
+    <button disabled={disabled} onClick={onStart} type="button">
+      {disabled ? "报告专项分析运行中…" : "开始报告专项分析（会产生费用）"}</button>
+  </section>;
+}
+
+function FinalReport({ analysis, generation, report, onGenerate }) {
+  const ready = analysis?.review?.ready_for_final;
+  return <div className="final-report"><section className="report-summary"><div>
+    <span>FINAL PDF</span><h2>生成最终视觉诊断 PDF</h2>
+    <p>最终报告仅使用已逐章通过的报告专项分析草稿进行本地排版。</p></div>
+    <div className="report-file-actions"><button disabled={!ready || ["queued", "running"].includes(generation?.status)}
+      onClick={onGenerate} type="button">{["queued", "running"].includes(generation?.status)
+        ? "正在生成PDF…" : "生成最终PDF"}</button>
+      {report?.has_pdf ? <><a href={api.reportFileUrl(report.report_id)} target="_blank" rel="noreferrer">浏览PDF</a>
+        <a download href={api.reportFileUrl(report.report_id)}>下载PDF</a></> : null}</div></section>
+    {!ready ? <div className="empty-results">请先将五个实际 PDF Section 全部审核为满意。</div> : null}
+    <UsageAudit analysis={analysis} generation={generation} />
+    {generation ? <section className={`report-generation ${generation.status}`}>
+      <strong>{stageLabels[generation.stage] || generation.stage}</strong>
+      <progress max="100" value={generation.progress || 0} />
+      {generation.error ? <p>{generation.error}</p> : null}</section> : null}
   </div>;
 }
 
 export default function Reports() {
-  const [tab, setTab] = useState("detailed");
-  const [report, setReport] = useState(null);
-  const [detailed, setDetailed] = useState([]);
+  const [tab, setTab] = useState("analysis");
+  const [jobs, setJobs] = useState([]);
+  const [selected, setSelected] = useState("");
   const [generation, setGeneration] = useState(null);
-  const [selectedDetailed, setSelectedDetailed] = useState("");
-  const [reviewSaving, setReviewSaving] = useState("");
+  const [report, setReport] = useState(null);
   const [error, setError] = useState("");
-  const loadReport = () => api.reports().then((reports) => {
+  const job = jobs.find((row) => row.job_id === selected);
+  const running = jobs.some((row) => ["queued", "running"].includes(row.status)
+    || ["queued", "running"].includes(row.revision?.status));
+  const refresh = () => Promise.all([api.reportAnalyses(), api.reports()]).then(([analyses, reports]) => {
+    setJobs(analyses.items || []);
+    setSelected((value) => value || analyses.items?.[0]?.job_id || "");
     const first = reports.items?.[0];
-    return first ? api.report(first.report_id) : null;
+    return first ? api.report(first.report_id).then(setReport) : setReport(null);
   });
+  useEffect(() => { refresh().catch((reason) => setError(reason.message)); }, []);
   useEffect(() => {
-    let active = true;
-    Promise.all([loadReport(), api.detailedAnalyses()]).then(([value, jobs]) => {
-      if (!active) return;
-      setReport(value);
-      setDetailed(jobs.items || []);
-      setSelectedDetailed((current) => current || jobs.items?.[0]?.job_id || "");
-    }).catch((reason) => { if (active) setError(reason.message); });
-    return () => { active = false; };
-  }, []);
-  useEffect(() => {
-    if (!["queued", "running"].includes(generation?.status)) return undefined;
+    if (!running && !["queued", "running"].includes(generation?.status)) return undefined;
     const timer = window.setTimeout(() => {
-      api.reportGeneration(generation.job_id).then((job) => {
-        setGeneration(job);
-        if (job.status === "complete") loadReport().then(setReport);
-      }).catch((reason) => setError(reason.message));
-    }, 750);
+      const requests = [refresh()];
+      if (["queued", "running"].includes(generation?.status)) {
+        requests.push(api.reportGeneration(generation.job_id).then((value) => {
+          setGeneration(value);
+          return value.status === "complete" ? refresh() : value;
+        }));
+      }
+      Promise.all(requests).catch((reason) => setError(reason.message));
+    }, 1000);
     return () => window.clearTimeout(timer);
-  }, [generation]);
-  const generate = () => {
-    setError("");
-    api.generateReport(selectedDetailed).then(setGeneration).catch((reason) => setError(reason.message));
-  };
-  const reviewSection = (jobId, sectionId, decision, suggestion) => {
-    setError("");
-    setReviewSaving(sectionId);
-    return api.reviewDetailedSection(jobId, sectionId, decision, suggestion).then((updated) => {
-      setDetailed((rows) => rows.map((row) => row.job_id === jobId ? updated : row));
-    }).catch((reason) => setError(reason.message)).finally(() => setReviewSaving(""));
-  };
-  const detailedJob = detailed.find((row) => row.job_id === selectedDetailed);
-  const finalReady = Boolean(detailedJob?.review?.ready_for_final);
+  }, [running, generation?.status, generation?.job_id]);
+  const start = () => api.startReportAnalysis({ target_store: "aloruh_shein",
+    categories: ["TOPS", "SKIRTS"], competitor_sample_per_store: 12 })
+    .then((created) => { setJobs((rows) => [created, ...rows]); setSelected(created.job_id); })
+    .catch((reason) => setError(reason.message));
+  const review = (sectionId, decision, suggestion) => api.reviewReportSection(
+    job.job_id, sectionId, decision, suggestion,
+  ).then((updated) => setJobs((rows) => rows.map((row) => row.job_id === updated.job_id ? updated : row)))
+    .catch((reason) => { setError(reason.message); throw reason; });
+  const generate = () => api.generateReport(job.job_id).then(setGeneration)
+    .catch((reason) => setError(reason.message));
   return <div className="reports-page">
-    <nav className="report-tabs" aria-label="报告类型">{Object.entries(tabs).map(([key, label]) => (
-      <button aria-current={tab === key ? "page" : undefined} className={tab === key ? "active" : ""}
-        disabled={key === "final" && !finalReady} key={key} onClick={() => setTab(key)}
-        title={key === "final" && !finalReady ? "请先完成Detailed报告Section审核" : ""}
-        type="button">{label}</button>
-    ))}</nav>
+    <nav className="report-tabs"><button className={tab === "analysis" ? "active" : ""}
+      onClick={() => setTab("analysis")} type="button">1. 报告专项分析与审核</button>
+      <button className={tab === "final" ? "active" : ""} disabled={!job?.review?.ready_for_final}
+        onClick={() => setTab("final")} type="button">2. 生成最终PDF</button></nav>
     {error ? <div className="error-banner">{error}</div> : null}
-    {tab === "final" ? <FinalReport detailed={detailedJob} generation={generation}
-      onGenerate={generate} report={report} /> : <DetailedReports onReady={() => setTab("final")}
-      onReview={reviewSection} onSelect={setSelectedDetailed} reviewSaving={reviewSaving}
-      rows={detailed} selected={selectedDetailed} />}
+    {tab === "analysis" ? <><StartAnalysis disabled={running} onStart={start} />
+      {jobs.length ? <div className="report-job-picker">{jobs.map((row) => <button
+        className={row.job_id === selected ? "active" : ""} key={row.job_id}
+        onClick={() => setSelected(row.job_id)} type="button">
+        <strong>{row.job_id.slice(0, 8)}</strong><span>{row.status}</span></button>)}</div> : null}
+      {job && ["queued", "running"].includes(job.status) ? <section className="report-generation">
+        <strong>{stageLabels[job.stage] || job.stage}</strong><progress max="100" value={job.progress || 0} />
+      </section> : null}
+      {job?.status === "failed" ? <div className="error-banner">{job.error}</div> : null}
+      {job?.status === "complete" ? <ReportAnalysisDraft job={job} onReview={review} /> : null}</>
+      : <FinalReport analysis={job} generation={generation} onGenerate={generate} report={report} />}
   </div>;
 }

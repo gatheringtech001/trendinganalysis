@@ -5,10 +5,10 @@ import unittest
 from pathlib import Path
 
 from server import (
-    AnalysisBusyError, DetailedAnalysisJobs, ResearchStore, VisualReportJobs,
-    build_database,
+    AnalysisBusyError, DetailedAnalysisJobs, ReportAnalysisJobs, ResearchStore,
+    VisualReportJobs, build_database,
 )
-from report_reviews import DETAILED_SECTION_IDS, DetailedReviewStore
+from report_reviews import REPORT_SECTION_IDS, DetailedReviewStore
 from report_pdf import _approval_summary
 from visual_reports import VisualReportCatalog
 
@@ -450,26 +450,11 @@ class ResearchStoreTest(unittest.TestCase):
         while status["status"] not in {"complete", "failed"} and time.time() < deadline:
             time.sleep(0.01)
             status = jobs.get(created["job_id"])
-        self.assertEqual("complete", status["status"])
+        self.assertEqual("complete", status["status"], status.get("error"))
         self.assertEqual("测试结论", status["result"]["analysis"]["selection_thesis"])
         self.assertEqual(123, status["usage"]["total_tokens"])
 
-    def test_visual_report_exposes_section_and_claim_evidence(self):
-        analysis = {
-            "analysis_version": "fashion-image-v1",
-            "analysis_status": "complete",
-            "analysis_method": "azure_openai_visual",
-            "tags": {
-                "selling_points": ["WAIST"], "composition": ["HALF_BODY"],
-                "view_action": ["FRONT_VIEW"],
-            },
-            "confidence": {"selling_points": 0.9},
-        }
-        for category in ("tops", "skirts"):
-            self.write_jsonl(
-                self.data_dir / f"image_analysis_{category}_cover_aloruh_shein.jsonl",
-                [{"key": f"aloruh_shein:{category.upper()}:1:1", "analysis": analysis}],
-            )
+    def test_visual_report_is_absent_until_user_generates_final_pdf(self):
         pdf_dir = Path(self.temp.name) / "pdf"
         pdf_dir.mkdir()
         (pdf_dir / "Aloruh纯视觉诊断-图片结论版.pdf").write_bytes(b"%PDF-1.4\n")
@@ -479,63 +464,76 @@ class ResearchStoreTest(unittest.TestCase):
             encoding="utf-8",
         )
 
-        report = VisualReportCatalog(
+        catalog = VisualReportCatalog(
             self.db_path, pdf_dir, (), analysis_dir=self.data_dir,
-        ).get("aloruh-visual-diagnostic-2026-08-20")
+        )
+        self.assertEqual([], catalog.list_reports())
+        final = {
+            "report_id": "aloruh-visual-diagnostic-2026-08-20",
+            "report_type": "final_visual", "title": "Aloruh 店铺视觉诊断",
+            "generated_at": "2026-08-20T00:00:00Z", "sample_count": 2,
+            "pages": 8, "sections": [{
+                "section_id": "brand_positioning", "title": "品牌视觉定位校准",
+                "claims": [{"claim_id": "c1", "conclusion": "结论", "derivation": "推导",
+                            "evidence": {"support_image_ids": ["i1"],
+                                         "counterexample_image_ids": [],
+                                         "example_image_ids": ["i1"], "sample_count": 2,
+                                         "filters": "首图", "observation_fields": ["场景"]}}],
+            }],
+        }
+        (pdf_dir / "Aloruh纯视觉诊断-图片结论版.json").write_text(
+            json.dumps(final), encoding="utf-8",
+        )
+        report = catalog.get("aloruh-visual-diagnostic-2026-08-20")
 
         self.assertEqual("final_visual", report["report_type"])
         self.assertEqual(2, report["sample_count"])
-        self.assertTrue(report["attention_heatmap"]["cells"])
-        self.assertTrue(report["combination_heatmap"]["cells"])
         for section in report["sections"]:
-            self.assertIn("source_records", section["evidence"])
             for claim in section["claims"]:
-                self.assertEqual(
-                    {"analysis_method", "sample_count", "filters", "metrics",
-                     "images", "source_records"},
-                    set(claim["evidence"]),
-                )
+                self.assertIn("derivation", claim)
+                self.assertIn("support_image_ids", claim["evidence"])
+                self.assertIn("counterexample_image_ids", claim["evidence"])
 
     def test_detailed_review_requires_suggestions_and_all_approvals(self):
         reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
-        job_id = "detailed-job-one"
+        job_id = "report-analysis-one"
 
         with self.assertRaises(ValueError):
-            reviews.save(job_id, DETAILED_SECTION_IDS[0], {
+            reviews.save(job_id, REPORT_SECTION_IDS[0], {
                 "decision": "down", "suggestion": "",
             })
-        for section_id in DETAILED_SECTION_IDS[:-1]:
+        for section_id in REPORT_SECTION_IDS[:-1]:
             reviews.save(job_id, section_id, {"decision": "up"})
         pending = reviews.summary(job_id)
         self.assertFalse(pending["ready_for_final"])
-        self.assertEqual(len(DETAILED_SECTION_IDS) - 1, pending["approved_sections"])
+        self.assertEqual(len(REPORT_SECTION_IDS) - 1, pending["approved_sections"])
         with self.assertRaises(ValueError):
             reviews.require_ready(job_id)
 
         complete = reviews.save(
-            job_id, DETAILED_SECTION_IDS[-1], {"decision": "up"},
+            job_id, REPORT_SECTION_IDS[-1], {"decision": "up"},
         )
         self.assertTrue(complete["ready_for_final"])
-        self.assertEqual(len(DETAILED_SECTION_IDS), complete["approved_sections"])
+        self.assertEqual(len(REPORT_SECTION_IDS), complete["approved_sections"])
 
-    def test_visual_report_job_requires_approved_detailed_report(self):
+    def test_visual_report_job_requires_approved_report_analysis(self):
         pdf_dir = Path(self.temp.name) / "generated-report"
         reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
-        detailed_job_id = "detailed-job-one"
+        analysis_job_id = "report-analysis-one"
+        analysis_result = {
+            "scope": {"target_images": 415}, "sections": [{"section_id": "s"}],
+            "images": [{"image_id": "i1"}], "executive_summary": ["测试"],
+        }
 
         class FakeCatalog:
-            def get(self, report_id):
-                return {
-                    "report_id": report_id, "sample_count": 415,
-                    "source_records": [{"record_id": "record-1"}],
-                }
-
-            def get_detailed(self, job_id):
-                if job_id != detailed_job_id:
+            def get_report_analysis(self, job_id):
+                if job_id != analysis_job_id:
                     return None
                 return {
                     "job_id": job_id, "status": "complete",
                     "usage": {"total_tokens": 123, "estimated_cost_usd": 0.01},
+                    "revision_usage": {"total_tokens": 4, "estimated_cost_usd": 0.001},
+                    "result": analysis_result,
                 }
 
         def fake_runner(report, output_dir, progress):
@@ -545,41 +543,115 @@ class ResearchStoreTest(unittest.TestCase):
                 b"%PDF-1.4\n",
             )
             (output_dir / "Aloruh纯视觉诊断-图片结论版-source-notes.json").write_text(
-                json.dumps({"pages": 8, "aloruh_images": report["sample_count"]}),
+                json.dumps({"pages": 8, "aloruh_images": report["scope"]["target_images"]}),
                 encoding="utf-8",
             )
-            return {"pages": 8, "sample_count": report["sample_count"]}
+            return {"pages": 8, "sample_count": report["scope"]["target_images"]}
 
         jobs = VisualReportJobs(
             FakeCatalog(), pdf_dir, reviews=reviews, runner=fake_runner,
         )
         with self.assertRaises(ValueError):
-            jobs.submit({"detailed_job_id": detailed_job_id})
-        for section_id in DETAILED_SECTION_IDS:
-            reviews.save(detailed_job_id, section_id, {"decision": "up"})
-        created = jobs.submit({"detailed_job_id": detailed_job_id})
+            jobs.submit({"analysis_job_id": analysis_job_id})
+        for section_id in REPORT_SECTION_IDS:
+            reviews.save(analysis_job_id, section_id, {"decision": "up"})
+        created = jobs.submit({"analysis_job_id": analysis_job_id})
         deadline = time.time() + 2
         status = jobs.get(created["job_id"])
         while status["status"] not in {"complete", "failed"} and time.time() < deadline:
             time.sleep(0.01)
             status = jobs.get(created["job_id"])
 
-        self.assertEqual("complete", status["status"])
+        self.assertEqual("complete", status["status"], status.get("error"))
         self.assertEqual(100, status["progress"])
         self.assertEqual(8, status["result"]["pages"])
         self.assertEqual(0, status["result"]["usage"]["total_tokens"])
-        self.assertEqual(123, status["result"]["upstream_detailed_usage"]["total_tokens"])
+        self.assertEqual(123, status["result"]["analysis_usage"]["total_tokens"])
+        self.assertEqual(4, status["result"]["revision_usage"]["total_tokens"])
         self.assertTrue((pdf_dir / "Aloruh纯视觉诊断-图片结论版.pdf").is_file())
         with self.assertRaises(ValueError):
             jobs.submit({"unsupported": True})
 
+    def test_report_analysis_requires_explicit_start_and_reanalyzes_rejected_section(self):
+        root = Path(self.temp.name) / "report-analysis"
+        reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
+
+        class FakeCatalog:
+            @staticmethod
+            def list_report_analyses():
+                return []
+
+            @staticmethod
+            def get_report_analysis(_job_id):
+                return None
+
+        def fake_runner(args, progress):
+            progress("analyzing_all_images", 70)
+            args.output.mkdir(parents=True, exist_ok=True)
+            result = {
+                "status": "complete", "scope": {"target_images": 2},
+                "executive_summary": ["测试摘要"],
+                "sections": [{
+                    "section_id": section_id, "title": section_id, "summary": "摘要",
+                    "methodology": "逐图观察", "claims": [],
+                } for section_id in REPORT_SECTION_IDS],
+                "images": [{"image_id": "i1"}], "image_observations": [],
+            }
+            (args.output / "result.json").write_text(json.dumps(result), encoding="utf-8")
+            (args.output / "usage-summary.json").write_text(
+                json.dumps({"total_tokens": 100}), encoding="utf-8",
+            )
+            return args.output
+
+        def fake_revision(args, progress):
+            progress("revising_section", 50)
+            path = args.output / "result.json"
+            result = json.loads(path.read_text(encoding="utf-8"))
+            for section in result["sections"]:
+                if section["section_id"] == args.section_id:
+                    section["summary"] = "已按建议重新分析"
+            path.write_text(json.dumps(result), encoding="utf-8")
+            (args.output / "revision-usage-summary.json").write_text(
+                json.dumps({"total_tokens": 20}), encoding="utf-8",
+            )
+            return args.output
+
+        jobs = ReportAnalysisJobs(
+            FakeCatalog(), self.db_path, root, reviews,
+            runner=fake_runner, revision_runner=fake_revision,
+        )
+        self.assertEqual([], jobs.list())
+        created = jobs.submit({})
+        deadline = time.time() + 2
+        status = jobs.get(created["job_id"])
+        while status["status"] not in {"complete", "failed"} and time.time() < deadline:
+            time.sleep(0.01)
+            status = jobs.get(created["job_id"])
+        self.assertEqual("complete", status["status"])
+        self.assertEqual(100, status["usage"]["total_tokens"])
+
+        revised = jobs.revise(
+            created["job_id"], REPORT_SECTION_IDS[0], "结论需要更多反例",
+        )
+        self.assertEqual("down", revised["review"]["sections"][REPORT_SECTION_IDS[0]]["decision"])
+        deadline = time.time() + 2
+        while time.time() < deadline:
+            status = jobs.get(created["job_id"])
+            if status.get("revision", {}).get("status") in {"complete", "failed"}:
+                break
+            time.sleep(0.01)
+        self.assertEqual("complete", status["revision"]["status"])
+        self.assertNotIn(REPORT_SECTION_IDS[0], status["review"]["sections"])
+        self.assertEqual("已按建议重新分析", status["result"]["sections"][0]["summary"])
+        self.assertEqual(20, status["revision_usage"]["total_tokens"])
+
     def test_pdf_approval_summary_uses_readable_review_counts(self):
-        report = {"approved_detailed": {
-            "job_id": "visual-analysis-sol-smoke",
-            "review": {"approved_sections": 7, "total_sections": 7},
+        report = {"approved_analysis": {
+            "job_id": "report-analysis-one",
+            "review": {"approved_sections": 5, "total_sections": 5},
         }}
 
-        self.assertEqual("精细分析报告 · 7/7 章节通过", _approval_summary(report))
+        self.assertEqual("报告专项分析 · 5/5 章节通过", _approval_summary(report))
 
     def test_visual_report_catalog_lists_persisted_detailed_runs(self):
         detailed_root = Path(self.temp.name) / "detailed"

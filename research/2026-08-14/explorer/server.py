@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from data_store import ResearchStore, build_database
 from database_builder import SNAPSHOT
 from report_pdf import build_visual_report
-from report_reviews import DetailedReviewStore
+from report_reviews import DetailedReviewStore, REPORT_SECTION_IDS
 from visual_reports import REPORT_ID, VisualReportCatalog
 
 
@@ -34,6 +34,9 @@ if not ANALYSIS_SCRIPT_DIR.is_dir():
 DETAILED_OUTPUT_DIR = Path(os.environ.get(
     "FASHION_SCOPE_DETAILED_OUTPUT_DIR", ROOT / "runtime" / "detailed_visual_jobs",
 ))
+REPORT_ANALYSIS_OUTPUT_DIR = Path(os.environ.get(
+    "FASHION_SCOPE_REPORT_ANALYSIS_OUTPUT_DIR", ROOT / "runtime" / "report_analysis_jobs",
+))
 REPO_ROOT = ROOT.parents[2]
 REPORT_PDF_DIR = Path(os.environ.get(
     "FASHION_SCOPE_REPORT_PDF_DIR", REPO_ROOT / "output" / "pdf",
@@ -49,6 +52,11 @@ DETAILED_HISTORY_ROOTS = (
 sys.path.insert(0, str(ANALYSIS_SCRIPT_DIR))
 
 from analyze_dimension_selection import run as run_detailed_analysis
+from report_analysis_runner import (
+    default_args as report_analysis_args,
+    revise_report_section,
+    run_report_analysis,
+)
 
 
 class AnalysisBusyError(RuntimeError):
@@ -240,6 +248,202 @@ class DetailedAnalysisJobs:
         return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+class ReportAnalysisJobs:
+    def __init__(
+        self, catalog, db_path, output_root, reviews,
+        runner=run_report_analysis, revision_runner=revise_report_section,
+    ):
+        self.catalog = catalog
+        self.db_path = Path(db_path)
+        self.output_root = Path(output_root)
+        self.reviews = reviews
+        self.runner = runner
+        self.revision_runner = revision_runner
+        self.lock = threading.Lock()
+        self.jobs = {}
+        self.active_job_id = None
+
+    def submit(self, payload):
+        target_store, categories, competitor_sample = self._validate(payload)
+        with self.lock:
+            if self.active_job_id:
+                raise AnalysisBusyError("已有报告专项分析或修订任务正在运行")
+            job_id = uuid.uuid4().hex
+            job = {
+                "job_id": job_id, "status": "queued", "stage": "queued",
+                "progress": 0, "created_at": self._now(), "updated_at": self._now(),
+                "scope": {
+                    "target_store": target_store, "categories": categories,
+                    "competitor_sample_per_store": competitor_sample,
+                },
+            }
+            self.jobs[job_id] = job
+            self.active_job_id = job_id
+            self._persist(job)
+        threading.Thread(target=self._run, args=(job_id,), daemon=True).start()
+        return copy.deepcopy(job)
+
+    def get(self, job_id):
+        with self.lock:
+            active = copy.deepcopy(self.jobs.get(job_id))
+        row = active or self.catalog.get_report_analysis(job_id)
+        return self.reviews.attach(row) if row else None
+
+    def list(self):
+        with self.lock:
+            active = [copy.deepcopy(row) for row in self.jobs.values()]
+        active_ids = {row["job_id"] for row in active}
+        persisted = [
+            row for row in self.catalog.list_report_analyses()
+            if row["job_id"] not in active_ids
+        ]
+        return [self.reviews.attach(row) for row in active + persisted]
+
+    def revise(self, job_id, section_id, suggestion):
+        if section_id not in REPORT_SECTION_IDS:
+            raise ValueError("未知的报告专项分析Section")
+        if not suggestion.strip():
+            raise ValueError("不满意时必须填写修改建议")
+        job = self.get(job_id)
+        if not job or job.get("status") != "complete":
+            raise ValueError("报告专项分析不存在或尚未完成")
+        if not any(
+            row.get("section_id") == section_id
+            for row in (job.get("result") or {}).get("sections", [])
+        ):
+            raise ValueError("报告专项分析不包含该Section")
+        with self.lock:
+            if self.active_job_id:
+                raise AnalysisBusyError("已有报告专项分析或修订任务正在运行")
+            current = self.jobs.get(job_id) or {
+                key: value for key, value in job.items() if key != "review"
+            }
+            current["revision"] = {
+                "section_id": section_id, "status": "queued", "progress": 0,
+                "suggestion": suggestion.strip(), "started_at": self._now(),
+            }
+            self.jobs[job_id] = current
+            self.active_job_id = job_id
+            self._persist(current)
+        self.reviews.save(job_id, section_id, {
+            "decision": "down", "suggestion": suggestion,
+        })
+        threading.Thread(
+            target=self._revise, args=(job_id, section_id, suggestion.strip()), daemon=True,
+        ).start()
+        return self.get(job_id)
+
+    def _run(self, job_id):
+        job = self.get(job_id)
+        scope = job["scope"]
+        output = self.output_root / job_id
+        self._update(job_id, status="running", stage="selecting_images", progress=2)
+        args = report_analysis_args(
+            db=self.db_path, output=output, target_store=scope["target_store"],
+            categories=scope["categories"],
+            competitor_sample_per_store=scope["competitor_sample_per_store"],
+        )
+        try:
+            result_dir = self.runner(
+                args, lambda stage, progress: self._update(
+                    job_id, stage=stage, progress=progress,
+                ),
+            )
+            result = self._read_json(Path(result_dir) / "result.json")
+            usage = self._optional_json(Path(result_dir) / "usage-summary.json")
+            self._update(
+                job_id, status="complete", stage="complete", progress=100,
+                result=result, usage=usage, completed_at=self._now(),
+            )
+        except Exception as error:
+            self._update(
+                job_id, status="failed", stage="failed", progress=100,
+                error=str(error)[:1000], completed_at=self._now(),
+            )
+        finally:
+            with self.lock:
+                if self.active_job_id == job_id:
+                    self.active_job_id = None
+
+    def _revise(self, job_id, section_id, suggestion):
+        output = self.output_root / job_id
+        args = report_analysis_args(
+            output=output, section_id=section_id, suggestion=suggestion,
+        )
+        try:
+            self.revision_runner(
+                args, lambda stage, progress: self._update_revision(
+                    job_id, stage=stage, progress=progress,
+                ),
+            )
+            result = self._read_json(output / "result.json")
+            revision_usage = self._optional_json(output / "revision-usage-summary.json")
+            self.reviews.reset(job_id, section_id)
+            self._update(
+                job_id, result=result, revision_usage=revision_usage,
+                revision={
+                    "section_id": section_id, "status": "complete", "progress": 100,
+                    "suggestion": suggestion, "completed_at": self._now(),
+                },
+            )
+        except Exception as error:
+            self._update_revision(job_id, status="failed", progress=100, error=str(error)[:1000])
+        finally:
+            with self.lock:
+                if self.active_job_id == job_id:
+                    self.active_job_id = None
+
+    @staticmethod
+    def _validate(payload):
+        if not isinstance(payload, dict) or set(payload) - {
+            "target_store", "categories", "competitor_sample_per_store",
+        }:
+            raise ValueError("报告专项分析请求格式不正确")
+        target = payload.get("target_store", "aloruh_shein")
+        categories = payload.get("categories", ["TOPS", "SKIRTS"])
+        sample = payload.get("competitor_sample_per_store", 12)
+        if target != "aloruh_shein":
+            raise ValueError("当前成品报告模板只支持Aloruh(SHEIN)")
+        if (not isinstance(categories, list) or not categories
+                or set(categories) - {"TOPS", "SKIRTS"}):
+            raise ValueError("报告品类只支持TOPS与SKIRTS")
+        if isinstance(sample, bool) or not isinstance(sample, int) or not 1 <= sample <= 24:
+            raise ValueError("竞品每店样本数必须为1-24")
+        return target, list(dict.fromkeys(categories)), sample
+
+    def _update_revision(self, job_id, **values):
+        with self.lock:
+            revision = self.jobs[job_id].setdefault("revision", {})
+            revision.update(values)
+            self.jobs[job_id]["updated_at"] = self._now()
+            self._persist(self.jobs[job_id])
+
+    def _update(self, job_id, **values):
+        with self.lock:
+            self.jobs[job_id].update(values, updated_at=self._now())
+            self._persist(self.jobs[job_id])
+
+    def _persist(self, job):
+        directory = self.output_root / job["job_id"]
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / "job.json"
+        building = path.with_suffix(".json.building")
+        building.write_text(json.dumps(job, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(building, path)
+
+    @staticmethod
+    def _read_json(path):
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    @classmethod
+    def _optional_json(cls, path):
+        return cls._read_json(path) if path.is_file() else None
+
+    @staticmethod
+    def _now():
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 class VisualReportJobs:
     def __init__(self, catalog, output_dir, reviews, runner=build_visual_report):
         self.catalog = catalog
@@ -251,16 +455,17 @@ class VisualReportJobs:
         self.active_job_id = None
 
     def submit(self, payload):
-        if not isinstance(payload, dict) or set(payload) != {"detailed_job_id"}:
-            raise ValueError("必须指定已审核的Detailed报告")
-        detailed_job_id = payload["detailed_job_id"]
-        detailed = self.catalog.get_detailed(detailed_job_id)
-        if not detailed or detailed.get("status") != "complete":
-            raise ValueError("指定的Detailed报告不存在或尚未完成")
-        review = self.reviews.require_ready(detailed_job_id)
-        approved_detailed = {
-            "job_id": detailed_job_id, "usage": detailed.get("usage"),
-            "review": review,
+        if not isinstance(payload, dict) or set(payload) != {"analysis_job_id"}:
+            raise ValueError("必须指定已审核的报告专项分析")
+        analysis_job_id = payload["analysis_job_id"]
+        analysis = self.catalog.get_report_analysis(analysis_job_id)
+        if not analysis or analysis.get("status") != "complete":
+            raise ValueError("指定的报告专项分析不存在或尚未完成")
+        review = self.reviews.require_ready(analysis_job_id)
+        approved_analysis = {
+            "job_id": analysis_job_id, "usage": analysis.get("usage"),
+            "revision_usage": analysis.get("revision_usage"), "review": review,
+            "result": analysis["result"],
         }
         with self.lock:
             if self.active_job_id:
@@ -269,13 +474,14 @@ class VisualReportJobs:
             job = {
                 "job_id": job_id, "status": "queued", "stage": "queued",
                 "progress": 0, "created_at": self._now(),
-                "detailed_job_id": detailed_job_id,
-                "upstream_detailed_usage": detailed.get("usage"),
+                "analysis_job_id": analysis_job_id,
+                "analysis_usage": analysis.get("usage"),
+                "revision_usage": analysis.get("revision_usage"),
             }
             self.jobs[job_id] = job
             self.active_job_id = job_id
         threading.Thread(
-            target=self._run, args=(job_id, approved_detailed), daemon=True,
+            target=self._run, args=(job_id, approved_analysis), daemon=True,
         ).start()
         return copy.deepcopy(job)
 
@@ -288,13 +494,17 @@ class VisualReportJobs:
         with self.lock:
             return [copy.deepcopy(job) for job in reversed(self.jobs.values())]
 
-    def _run(self, job_id, approved_detailed):
+    def _run(self, job_id, approved_analysis):
         self._update(job_id, status="running", stage="aggregating", progress=5)
         try:
-            report = self.catalog.get(REPORT_ID)
-            if report is None or not report.get("source_records"):
-                raise RuntimeError("没有可用于生成报告的分析记录")
-            report["approved_detailed"] = approved_detailed
+            report = copy.deepcopy(approved_analysis["result"])
+            if not report.get("sections") or not report.get("images"):
+                raise RuntimeError("报告专项分析缺少章节或图片证据")
+            report["approved_analysis"] = {
+                key: approved_analysis[key] for key in (
+                    "job_id", "usage", "revision_usage", "review",
+                )
+            }
             result = self.runner(
                 report, self.output_dir,
                 lambda stage, progress: self._update(
@@ -307,8 +517,9 @@ class VisualReportJobs:
                 "estimated_cost_usd": 0,
                 "note": "PDF排版在本地完成，未调用模型",
             })
-            result["detailed_job_id"] = approved_detailed["job_id"]
-            result["upstream_detailed_usage"] = approved_detailed.get("usage")
+            result["analysis_job_id"] = approved_analysis["job_id"]
+            result["analysis_usage"] = approved_analysis.get("usage")
+            result["revision_usage"] = approved_analysis.get("revision_usage")
             self._update(
                 job_id, status="complete", stage="complete", progress=100,
                 completed_at=self._now(), result=result,
@@ -355,9 +566,11 @@ class ResearchHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
         review_request = self._review_parts(parsed.path)
+        report_review_request = self._report_review_parts(parsed.path)
         if parsed.path not in {
-            "/api/ask", "/api/detailed-analysis", "/api/reports/generate",
-        } and review_request is None:
+            "/api/ask", "/api/detailed-analysis", "/api/report-analyses",
+            "/api/reports/generate",
+        } and review_request is None and report_review_request is None:
             self.send_error(404)
             return
         declared_length = int(self.headers.get("Content-Length", "0"))
@@ -384,6 +597,29 @@ class ResearchHandler(SimpleHTTPRequestHandler):
             except (TypeError, ValueError) as error:
                 self.send_json({"error": "invalid_review", "message": str(error)}, 400)
             return
+        if report_review_request:
+            job_id, section_id = report_review_request
+            try:
+                decision = payload.get("decision") if isinstance(payload, dict) else None
+                suggestion = str(payload.get("suggestion", "")).strip()
+                if decision == "up":
+                    review = self.server.review_store.save(job_id, section_id, payload)
+                    job = self.server.report_analysis_jobs.get(job_id)
+                    self.send_json({**job, "review": review})
+                elif decision == "down":
+                    self.send_json(
+                        self.server.report_analysis_jobs.revise(
+                            job_id, section_id, suggestion,
+                        ),
+                        202,
+                    )
+                else:
+                    raise ValueError("请选择满意或不满意")
+            except AnalysisBusyError as error:
+                self.send_json({"error": "analysis_busy", "message": str(error)}, 409)
+            except (TypeError, ValueError) as error:
+                self.send_json({"error": "invalid_review", "message": str(error)}, 400)
+            return
         if parsed.path == "/api/reports/generate":
             try:
                 self.send_json(self.server.report_jobs.submit(payload), 202)
@@ -400,6 +636,14 @@ class ResearchHandler(SimpleHTTPRequestHandler):
             except (TypeError, ValueError) as error:
                 self.send_json({"error": "invalid_request", "message": str(error)}, 400)
             return
+        if parsed.path == "/api/report-analyses":
+            try:
+                self.send_json(self.server.report_analysis_jobs.submit(payload), 202)
+            except AnalysisBusyError as error:
+                self.send_json({"error": "analysis_busy", "message": str(error)}, 409)
+            except (TypeError, ValueError) as error:
+                self.send_json({"error": "invalid_request", "message": str(error)}, 400)
+            return
         question = str(payload.get("question", ""))[:500]
         self.send_json(self.server.store.answer(question))
 
@@ -409,6 +653,14 @@ class ResearchHandler(SimpleHTTPRequestHandler):
         try:
             if parsed.path == "/api/reports":
                 payload = {"items": self.server.reports.list_reports()}
+            elif parsed.path == "/api/report-analyses":
+                payload = {"items": self.server.report_analysis_jobs.list()}
+            elif parsed.path.startswith("/api/report-analyses/"):
+                job_id = parsed.path.rsplit("/", 1)[-1]
+                payload = self.server.report_analysis_jobs.get(job_id)
+                if payload is None:
+                    self.send_json({"error": "not_found"}, 404)
+                    return
             elif parsed.path == "/api/report-generation":
                 payload = {"items": self.server.report_jobs.list()}
             elif parsed.path.startswith("/api/report-generation/"):
@@ -490,6 +742,15 @@ class ResearchHandler(SimpleHTTPRequestHandler):
             return None
         return parts[2], parts[4]
 
+    @staticmethod
+    def _report_review_parts(path):
+        parts = [unquote(part) for part in path.split("/") if part]
+        if len(parts) != 5 or parts[:2] != ["api", "report-analyses"]:
+            return None
+        if parts[3] != "reviews":
+            return None
+        return parts[2], parts[4]
+
     def send_json(self, payload, status=200):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -540,8 +801,12 @@ def main():
     )
     server.reports = VisualReportCatalog(
         DB_PATH, REPORT_PDF_DIR, DETAILED_HISTORY_ROOTS, analysis_dir=DATA_DIR,
+        report_analysis_root=REPORT_ANALYSIS_OUTPUT_DIR,
     )
     server.review_store = DetailedReviewStore(REPORT_PDF_DIR / "reviews")
+    server.report_analysis_jobs = ReportAnalysisJobs(
+        server.reports, DB_PATH, REPORT_ANALYSIS_OUTPUT_DIR, server.review_store,
+    )
     server.report_jobs = VisualReportJobs(
         server.reports, REPORT_PDF_DIR, server.review_store,
     )

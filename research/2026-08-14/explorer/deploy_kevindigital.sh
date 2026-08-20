@@ -10,6 +10,7 @@ blob_url="$(python3 -c 'import sys; print(bytes.fromhex(sys.argv[1]).decode())' 
 expected_sha256="$2"
 base_dir="/home/regardsadmin/projects/fashion-scope"
 runtime_dir="/var/lib/fashion-scope/detailed_visual_jobs"
+report_analysis_runtime_dir="/var/lib/fashion-scope/report_analysis_jobs"
 report_runtime_dir="/var/lib/fashion-scope/reports"
 release_id="$(date -u +%Y%m%dT%H%M%SZ)"
 release_dir="$base_dir/releases/$release_id"
@@ -49,6 +50,8 @@ test -f "$release_dir/dist/index.html"
 test -f "$release_dir/data/image_analysis_tops_cover_aloruh_shein.jsonl"
 test -f "$release_dir/data/image_analysis_skirts_cover_aloruh_shein.jsonl"
 test -f "$release_dir/analysis_scripts/analyze_dimension_selection.py"
+test -f "$release_dir/analysis_scripts/report_analysis_model.py"
+test -f "$release_dir/analysis_scripts/report_analysis_runner.py"
 test -f "$release_dir/requirements-production.txt"
 sudo test -s /etc/fashion-scope.env
 sudo -u regardsadmin python3 -m venv "$release_dir/.venv"
@@ -57,6 +60,7 @@ sudo -u regardsadmin "$release_dir/.venv/bin/pip" install \
   -r "$release_dir/requirements-production.txt"
 sudo -u regardsadmin "$release_dir/.venv/bin/python" -c 'import PIL'
 sudo install -d -o regardsadmin -g regardsadmin -m 0750 "$runtime_dir"
+sudo install -d -o regardsadmin -g regardsadmin -m 0750 "$report_analysis_runtime_dir"
 sudo install -d -o regardsadmin -g regardsadmin -m 0750 "$report_runtime_dir"
 if [ -d "$release_dir/report_pdf" ] && [ ! -f "$report_runtime_dir/Aloruh纯视觉诊断-图片结论版.pdf" ]; then
   sudo -u regardsadmin cp -a "$release_dir/report_pdf/." "$report_runtime_dir/"
@@ -77,6 +81,7 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=FASHION_SCOPE_DATA_DIR=/home/regardsadmin/projects/fashion-scope/current/data
 Environment=FASHION_SCOPE_ANALYSIS_SCRIPTS=/home/regardsadmin/projects/fashion-scope/current/analysis_scripts
 Environment=FASHION_SCOPE_DETAILED_OUTPUT_DIR=/var/lib/fashion-scope/detailed_visual_jobs
+Environment=FASHION_SCOPE_REPORT_ANALYSIS_OUTPUT_DIR=/var/lib/fashion-scope/report_analysis_jobs
 Environment=FASHION_SCOPE_DETAILED_HISTORY_ROOT=/home/regardsadmin/projects/fashion-scope/current/detailed_history
 Environment=FASHION_SCOPE_REPORT_PDF_DIR=/var/lib/fashion-scope/reports
 EnvironmentFile=/etc/fashion-scope.env
@@ -87,7 +92,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=read-only
-ReadWritePaths=/var/lib/fashion-scope/detailed_visual_jobs /var/lib/fashion-scope/reports
+ReadWritePaths=/var/lib/fashion-scope/detailed_visual_jobs /var/lib/fashion-scope/report_analysis_jobs /var/lib/fashion-scope/reports
 
 [Install]
 WantedBy=multi-user.target

@@ -44,11 +44,28 @@ export const api = {
   reports: () => request("/api/reports"),
   report: (reportId) => request(`/api/reports/${encodeURIComponent(reportId)}`),
   reportFileUrl: (reportId) => `${apiBase}/api/reports/${encodeURIComponent(reportId)}/file`,
-  generateReport: (detailedJobId) => request("/api/reports/generate", {
+  generateReport: (analysisJobId) => request("/api/reports/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ detailed_job_id: detailedJobId }),
+    body: JSON.stringify({ analysis_job_id: analysisJobId }),
   }),
+  reportAnalyses: () => request("/api/report-analyses"),
+  startReportAnalysis: (payload) => request("/api/report-analyses", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }),
+  reportAnalysis: (jobId) => request(
+    `/api/report-analyses/${encodeURIComponent(jobId)}`,
+  ),
+  reviewReportSection: (jobId, sectionId, decision, suggestion = "") => request(
+    `/api/report-analyses/${encodeURIComponent(jobId)}/reviews/${encodeURIComponent(sectionId)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision, suggestion }),
+    },
+  ),
   reportGeneration: (jobId) => request(
     `/api/report-generation/${encodeURIComponent(jobId)}`,
   ),

@@ -8,15 +8,14 @@ import time
 from pathlib import Path
 
 
-DETAILED_SECTION_IDS = (
-    "overall_conclusion",
-    "shared_patterns",
-    "cross_store_differences",
-    "store_positioning",
-    "recommended_shot_system",
-    "ab_test_hypotheses",
-    "image_analysis",
+REPORT_SECTION_IDS = (
+    "brand_positioning",
+    "product_display",
+    "store_visual_audit",
+    "competitive_gap",
+    "visual_upgrade",
 )
+DETAILED_SECTION_IDS = REPORT_SECTION_IDS
 JOB_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 
@@ -35,27 +34,27 @@ class DetailedReviewStore:
             updated_at = payload.get("updated_at")
         approved = sum(
             sections.get(section_id, {}).get("decision") == "up"
-            for section_id in DETAILED_SECTION_IDS
+            for section_id in REPORT_SECTION_IDS
         )
         rejected = sum(
             sections.get(section_id, {}).get("decision") == "down"
-            for section_id in DETAILED_SECTION_IDS
+            for section_id in REPORT_SECTION_IDS
         )
         return {
             "job_id": job_id,
-            "total_sections": len(DETAILED_SECTION_IDS),
+            "total_sections": len(REPORT_SECTION_IDS),
             "reviewed_sections": approved + rejected,
             "approved_sections": approved,
             "rejected_sections": rejected,
-            "ready_for_final": approved == len(DETAILED_SECTION_IDS),
+            "ready_for_final": approved == len(REPORT_SECTION_IDS),
             "sections": sections,
             "updated_at": updated_at,
         }
 
     def save(self, job_id, section_id, payload):
         job_id = self._validate_job_id(job_id)
-        if section_id not in DETAILED_SECTION_IDS:
-            raise ValueError("未知的Detailed报告Section")
+        if section_id not in REPORT_SECTION_IDS:
+            raise ValueError("未知的报告专项分析Section")
         if not isinstance(payload, dict) or set(payload) - {"decision", "suggestion"}:
             raise ValueError("审核请求格式不正确")
         decision = payload.get("decision")
@@ -80,10 +79,23 @@ class DetailedReviewStore:
         self._atomic_write(self.root / f"{job_id}.json", document)
         return self.summary(job_id)
 
+    def reset(self, job_id, section_id):
+        job_id = self._validate_job_id(job_id)
+        if section_id not in REPORT_SECTION_IDS:
+            raise ValueError("未知的报告专项分析Section")
+        current = self.summary(job_id)
+        current["sections"].pop(section_id, None)
+        updated_at = self._now()
+        self._atomic_write(self.root / f"{job_id}.json", {
+            "job_id": job_id, "updated_at": updated_at,
+            "sections": current["sections"],
+        })
+        return self.summary(job_id)
+
     def require_ready(self, job_id):
         review = self.summary(job_id)
         if not review["ready_for_final"]:
-            raise ValueError("必须先将Detailed报告的全部Section审核为满意")
+            raise ValueError("必须先将报告专项分析的全部Section审核为满意")
         return review
 
     def attach(self, job):
