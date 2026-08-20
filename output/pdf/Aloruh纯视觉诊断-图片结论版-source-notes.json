@@ -1,0 +1,22 @@
+{
+  "generated": "2026-08-20",
+  "pages": 40,
+  "aloruh_images": 415,
+  "tops": 343,
+  "skirts": 72,
+  "reference_style": "image-led diagnostic; large photo grids; concise evidence-backed conclusions",
+  "excluded_topics": [
+    "exposure",
+    "clicks",
+    "CTR",
+    "CVR",
+    "sales",
+    "ROI"
+  ],
+  "sources": [
+    "C:\\Users\\kevinyan\\OneDrive - Microsoft\\文档\\ChatGPT\\trendinganalysis\\research\\2026-08-14\\explorer\\explorer.db",
+    "C:\\Users\\kevinyan\\OneDrive - Microsoft\\文档\\ChatGPT\\trendinganalysis\\research\\2026-08-14\\data\\image_analysis_skirts_cover_aloruh_shein.jsonl",
+    "C:\\Users\\kevinyan\\OneDrive - Microsoft\\文档\\ChatGPT\\trendinganalysis\\output\\visual-analysis-sol-smoke\\result.json"
+  ],
+  "chart_map": "No trend or performance charts. Only image counts and tag coverage shown as concise context."
+}
