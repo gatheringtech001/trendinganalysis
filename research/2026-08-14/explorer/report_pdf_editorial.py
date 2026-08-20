@@ -1,239 +1,189 @@
-from __future__ import annotations
-
-from pathlib import Path
-
-from PIL import Image
-from reportlab.lib.colors import HexColor
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen.canvas import Canvas
+from report_pdf_layout import DeckBase, INK, PAGE, PAPER, SAND, STONE, WHITE, SECTION_LABELS
 
 
-PAGE = (1920, 1080)
-INK = HexColor("#111111")
-WHITE = HexColor("#FFFFFF")
-PAPER = HexColor("#F4F1EC")
-SAND = HexColor("#D6C6B8")
-STONE = HexColor("#706B66")
-LINE = HexColor("#D8D3CD")
-FONT_PATH = Path(__file__).with_name("assets") / "NotoSansSC-Regular-CJK.ttf"
-
-SECTION_LABELS = {
-    "brand_positioning": ("VISUAL POSITIONING", "品牌定位"),
-    "product_display": ("PRODUCT DISPLAY", "商品展示"),
-    "store_visual_audit": ("STORE VISUAL AUDIT", "店铺视觉"),
-    "competitive_gap": ("VISUAL DISCREPANCY", "视觉落差"),
-    "visual_upgrade": ("VISUAL UPGRADE", "升级方向"),
-}
-
-
-def _register_font():
-    name = "NotoSansSC"
-    if name not in pdfmetrics.getRegisteredFontNames():
-        if not FONT_PATH.is_file():
-            raise RuntimeError(f"PDF中文字体缺失: {FONT_PATH}")
-        pdfmetrics.registerFont(TTFont(name, str(FONT_PATH)))
-    return name
-
-
-def _font(text, bold=False):
-    if str(text).isascii():
-        return "Helvetica-Bold" if bold else "Helvetica"
-    return _register_font()
-
-
-def _wrap(text, font, size, max_width):
-    lines, current = [], ""
-    for char in str(text).replace("\r", ""):
-        if char == "\n":
-            lines.append(current)
-            current = ""
-            continue
-        candidate = current + char
-        if current and pdfmetrics.stringWidth(candidate, font, size) > max_width:
-            lines.append(current)
-            current = char
-        else:
-            current = candidate
-    if current:
-        lines.append(current)
-    return lines or [""]
-
-
-def _crop(canvas, path, x, y, width, height):
-    with Image.open(path) as image:
-        source_ratio = image.width / image.height
-    target_ratio = width / height
-    if source_ratio > target_ratio:
-        draw_height, draw_width = height, height * source_ratio
-        draw_x, draw_y = x - (draw_width - width) / 2, y
-    else:
-        draw_width, draw_height = width, width / source_ratio
-        draw_x, draw_y = x, y - (draw_height - height) / 2
-    canvas.saveState()
-    clip = canvas.beginPath()
-    clip.rect(x, y, width, height)
-    canvas.clipPath(clip, stroke=0, fill=0)
-    canvas.drawImage(
-        ImageReader(str(path)), draw_x, draw_y, draw_width, draw_height,
-        preserveAspectRatio=True, mask="auto",
-    )
-    canvas.restoreState()
-
-
-class EditorialDeck:
-    def __init__(self, path, images, image_loader):
-        self.canvas = Canvas(str(path), pagesize=PAGE)
-        self.images = images
-        self.image_loader = image_loader
-        self.page = 0
-        self.displayed_evidence_ids = []
-
-    def _new_page(self, background=WHITE):
-        self.page += 1
-        self.canvas.setFillColor(background)
-        self.canvas.rect(0, 0, *PAGE, fill=1, stroke=0)
-
-    def _finish_page(self):
-        self.canvas.showPage()
-
-    def _text(self, text, x, y, size, width, color=INK, bold=False,
-              leading=1.18, max_lines=None):
-        font = _font(text, bold)
-        lines = _wrap(text, font, size, width)
-        if max_lines and len(lines) > max_lines:
-            lines = lines[:max_lines]
-            lines[-1] = lines[-1].rstrip("。；，,. ") + "…"
-        self.canvas.setFont(font, size)
-        self.canvas.setFillColor(color)
-        for line in lines:
-            self.canvas.drawString(x, y, line)
-            y -= size * leading
-        return y
-
-    def _photo(self, image_id, x, y, width, height):
-        image = self.images.get(image_id)
-        if image is None:
-            raise ValueError(f"报告引用未知图片: {image_id}")
-        path = self.image_loader(image["resolved_url"])
-        _crop(self.canvas, path, x, y, width, height)
-
-    def cover(self):
-        self._new_page()
-        self.canvas.setFillColor(INK)
-        self.canvas.rect(0, 0, 22, PAGE[1], fill=1, stroke=0)
-        self._text("ALORUH", 165, 620, 118, 1200, bold=True)
+class EditorialDeck(DeckBase):
+    def _draw_cover(self, _spec):
+        self._text("ALORUH", 680, 565, 84, 700, INK, True)
         self.canvas.setStrokeColor(INK)
-        self.canvas.setLineWidth(2)
-        self.canvas.line(170, 555, 1040, 555)
-        self._text("店铺视觉诊断", 170, 485, 36, 800)
-        self._text("VISUAL DIAGNOSTIC · 2026.08", 1430, 95, 18, 390, STONE)
-        self._finish_page()
+        self.canvas.line(650, 535, 1265, 535)
 
-    def executive(self, report):
-        self._new_page()
-        self._text("VISUAL DIAGNOSTIC", 110, 995, 18, 600, STONE, True)
-        self._text("执行摘要", 110, 900, 66, 700)
-        for index, summary in enumerate(report["executive_summary"][:4]):
-            x = 110 + (index % 2) * 880
-            y = 690 - (index // 2) * 340
-            self._text(f"0{index + 1}", x, y + 105, 22, 100, SAND, True)
-            self._text(summary, x, y, 28, 720, INK, max_lines=5)
-        self._finish_page()
+    def _draw_divider(self, spec):
+        self._text("A", 45, 1010, 18, 40, INK, True)
+        self._text("\n".join(spec["title"].split()), 48, 720, 70, 850, INK, True, 1.04, 4)
+        self._text(SECTION_LABELS[spec["section"]], 1150, 620, 62, 600, INK, max_lines=2)
 
-    def scope(self, report):
-        scope = report["scope"]
-        metrics = [
-            (scope["target_images"], "ALORUH 全量目标图"),
-            (scope.get("competitor_population_images", 0), "三家竞品全量分母"),
-            (len(report.get("image_observations", [])), "逐图视觉观察"),
-        ]
-        self._new_page(PAPER)
-        self._text("EVIDENCE SCOPE", 110, 995, 18, 500, STONE, True)
-        self._text("证据范围", 110, 915, 58, 650)
+    def _draw_statement(self, spec):
+        claim = self._claim(spec)
+        self._text("品牌名称", 830, 940, 24, 300, INK, True)
+        self._text("Brand Name", 835, 890, 17, 300, STONE)
+        self._text("ALORUH", 650, 700, 58, 700, INK, True)
+        self._text("allure / aura / soft sensuality", 650, 625, 22, 750, STONE)
+        self._text(claim["conclusion"], 390, 450, 22, 1160, INK, max_lines=4)
+
+    def _draw_dark_collage(self, spec):
+        self._grid(self._take(spec, 8), 565, 80, 1305, 920, 4, 8, .12)
+        self._text(spec["title"], 50, 990, 22, 450, WHITE, True, max_lines=2)
+        self._text(spec["subtitle"], 50, 250, 22, 430, WHITE, True, max_lines=3)
+        self._text(self._body(spec), 50, 160, 15, 430, SAND, max_lines=5)
+
+    def _draw_mosaic(self, spec):
+        self._header(spec)
+        self._grid(self._take(spec, 12), 50, 55, 1820, 840, 6, 8)
+
+    def _draw_dense_mosaic(self, spec):
+        self._header(spec)
+        self._grid(self._take(spec, 20), 50, 45, 1820, 860, 10, 6)
+
+    def _draw_scope(self, spec):
+        scope = self.report["scope"]
+        self._grid(self._take(spec, 9), 790, 0, 1130, 1080, 3, 6, .25)
+        self._text(spec["title"], 50, 990, 34, 660, WHITE, True, max_lines=4)
+        self._text(self._body(spec), 50, 790, 19, 650, SAND, max_lines=7)
+        metrics = [(scope["target_images"], "ALORUH 全量目标图"), (len(self.report["image_observations"]), "逐图观察"), (scope["competitor_population_images"], "竞品全量分母")]
         for index, (value, label) in enumerate(metrics):
-            x = 110 + index * 590
-            self._text(f"{value:,}", x, 735, 72, 480, INK, True)
-            self._text(label, x, 650, 20, 450, STONE)
-        ids = [row["image_id"] for row in report["images"][:6]]
-        for index, image_id in enumerate(ids):
-            self._photo(image_id, 110 + index * 286, 80, 258, 420)
-        self._finish_page()
+            y = 430 - index * 110
+            self._text(f"{value:,}", 50, y, 42, 250, WHITE, True)
+            self._text(label, 285, y - 2, 16, 360, SAND)
 
-    def section_divider(self, section, section_index):
-        english, chinese = SECTION_LABELS.get(
-            section["section_id"], ("VISUAL DIAGNOSTIC", section["title"]),
-        )
-        dark = section["section_id"] in {"competitive_gap", "visual_upgrade"}
-        background, foreground = (INK, WHITE) if dark else (WHITE, INK)
-        self._new_page(background)
-        self._text(f"0{section_index}", 110, 965, 24, 120, SAND, True)
-        self._text(english, 110, 760, 76, 930, foreground, True, max_lines=2)
-        self._text(chinese, 1240, 520, 62, 560, foreground)
-        self._text(section["summary"], 110, 320, 24, 950, foreground, max_lines=4)
-        self._finish_page()
+    def _draw_hero_collage(self, spec):
+        self._grid(self._take(spec, 10), 0, 0, 1920, 1080, 5, 0, .08)
+        self.canvas.setFillColorRGB(0, 0, 0, alpha=.65)
+        self.canvas.rect(0, 0, 690, 1080, fill=1, stroke=0)
+        self._text(spec["title"], 52, 920, 30, 570, WHITE, True, max_lines=4)
+        self._text(self._body(spec), 52, 700, 18, 560, WHITE, max_lines=8)
 
-    def claim(self, section, claim, claim_index):
-        self._claim_hero(section, claim, claim_index)
-        evidence = claim["evidence"]
-        items = [
-            (image_id, "支持证据") for image_id in evidence["support_image_ids"]
-        ] + [
-            (image_id, "边界反例")
-            for image_id in evidence["counterexample_image_ids"]
+    def _draw_method(self, spec):
+        self._header(spec)
+        labels = ["标准正面", "氛围首图", "结构证据", "局部细节"]
+        for index, label in enumerate(labels):
+            x = 55 + index * 455
+            self.canvas.setFillColor(PAPER)
+            self.canvas.roundRect(x, 165, 420, 650, 12, fill=1, stroke=0)
+            self._text(f"0{index + 1}", x + 25, 760, 24, 80, SAND, True)
+            self._text(label, x + 25, 675, 29, 360, INK, True, max_lines=2)
+            claim = self._section(spec)["claims"][index % 3]
+            self._text(claim["conclusion"], x + 25, 560, 18, 360, STONE, max_lines=8)
+
+    def _draw_traits(self, spec):
+        self._header(spec)
+        labels = ["设计点前置", "身体线条清楚", "完整搭配", "结构可核对"]
+        for index, (image_id, label) in enumerate(zip(self._take(spec, 4), labels)):
+            x = 50 + index * 458
+            self._photo(image_id, x, 185, 420, 650)
+            self._text(label, x + 15, 135, 17, 380, INK, True)
+
+    def _draw_feature(self, spec):
+        self._header(spec)
+        self._text(self._body(spec), 55, 860, 23, 1810, INK, max_lines=3)
+        for index, image_id in enumerate(self._take(spec, 3)):
+            x = 55 + index * 610
+            self._photo(image_id, x, 85, 575, 640)
+            self.canvas.setFillColor(INK)
+            self.canvas.rect(x, 85, 575, 48, fill=1, stroke=0)
+            self._text("重点提升", x + 18, 101, 15, 200, WHITE, True)
+
+    def _draw_matrix(self, spec):
+        self._header(spec)
+        labels = ["TOPS 近景", "SKIRTS 全长", "正面", "背面", "局部"]
+        for index, (image_id, label) in enumerate(zip(self._take(spec, 5), labels)):
+            x = 50 + index * 364
+            self._photo(image_id, x, 360, 330, 500)
+            self._text(label, x, 315, 18, 330, INK, True)
+            self._text("构图 / 动作 / 卖点 / 场景", x, 265, 14, 330, STONE)
+        self._text(self._body(spec), 50, 145, 21, 1780, INK, max_lines=3)
+
+    def _draw_logic(self, spec):
+        self._header(spec)
+        labels = ["场景入口分散", "模板重复", "信息层级不统一"]
+        for index, (image_id, label) in enumerate(zip(self._take(spec, 3), labels)):
+            x = 75 + index * 610
+            self._photo(image_id, x, 210, 535, 650)
+            self._text(label, x, 165, 18, 530, INK, True)
+        self._text(self._body(spec), 75, 105, 16, 1750, STONE, max_lines=2)
+
+    def _draw_quote(self, spec):
+        self._text(spec["title"], 190, 690, 50, 1500, WHITE, True, 1.12, 4)
+        self.canvas.setStrokeColor(SAND)
+        self.canvas.setLineWidth(3)
+        self.canvas.line(190, 540, 1740, 540)
+        self._text(self._body(spec), 190, 455, 22, 1450, SAND, max_lines=5)
+
+    def _draw_three_compare(self, spec):
+        self._header(spec)
+        for index, image_id in enumerate(self._take(spec, 3)):
+            self._photo(image_id, index * 640, 0, 640, 900, .12 if index != 1 else 0)
+        self._text(self._body(spec), 55, 820, 19, 550, WHITE, True, max_lines=5)
+
+    def _draw_four_compare(self, spec):
+        self._header(spec)
+        for index, image_id in enumerate(self._take(spec, 4)):
+            self._photo(image_id, index * 480, 0, 480, 905, .22 if index % 2 == 0 else 0)
+            self._text("现状" if index % 2 == 0 else "调整后", index * 480 + 35, 55, 17, 170, WHITE, True)
+
+    def _draw_brand_codes(self, spec):
+        self._header(spec)
+        source_specs = [
+            {"section": "brand_positioning", "page": spec["page"]},
+            {**spec, "store": "princess_polly"},
+            {**spec, "store": "motel"},
+            {**spec, "store": "prettylittlething"},
         ]
-        for start in range(0, len(items), 12):
-            self._evidence_page(section, claim, items[start:start + 12], start // 12 + 1)
+        motel_pair = self._take(source_specs[2], 2)
+        ids = [
+            self._take(source_specs[0], 1)[0],
+            self._take(source_specs[1], 1)[0],
+            motel_pair[1],
+            self._take(source_specs[3], 1)[0],
+        ]
+        labels = ["ALORUH", "PRINCESS POLLY", "MOTEL ROCKS", "PRETTYLITTLETHING"]
+        claims = self._section(spec)["claims"]
+        for index, (image_id, label) in enumerate(zip(ids, labels)):
+            x = 50 + index * 455
+            self._photo(image_id, x, 405, 420, 480, .2)
+            self._text(label, x, 355, 17, 420, INK, True)
+            body = self.sections["brand_positioning"]["summary"] if index == 0 else claims[index - 1]["conclusion"]
+            self._text(body, x, 300, 14, 405, STONE, max_lines=7)
+        self._photo(motel_pair[0], 1240, 430, 115, 150)
 
-    def _claim_hero(self, section, claim, claim_index):
-        self._new_page()
-        self._text("CLAIM", 100, 990, 17, 120, STONE, True)
-        self._text(f"{claim_index:02d}", 100, 920, 44, 180, SAND, True)
-        self._text(section["title"], 100, 820, 22, 670, STONE)
-        self._text(claim["conclusion"], 100, 735, 36, 690, INK, max_lines=7)
-        self._text("如何得到", 100, 330, 16, 140, STONE, True)
-        self._text(claim["derivation"], 100, 285, 18, 690, STONE, max_lines=6)
-        evidence = claim["evidence"]
-        candidates = (
-            evidence.get("example_image_ids", [])
-            + evidence["support_image_ids"]
-            + evidence["counterexample_image_ids"]
-        )
-        ids = list(dict.fromkeys(candidates))[:3]
-        layouts = [(880, 135, 550, 810), (1455, 550, 365, 395), (1455, 135, 365, 395)]
-        for image_id, rect in zip(ids, layouts):
-            self._photo(image_id, *rect)
-        self._finish_page()
+    def _draw_brand_feature(self, spec):
+        ids = self._take(spec, 4)
+        self._photo(ids[0], 810, 0, 1110, 1080, .08)
+        for index, image_id in enumerate(ids[1:]):
+            self._photo(image_id, 50 + index * 235, 65, 215, 285, .12)
+        self._text(spec["title"], 50, 940, 44, 690, WHITE, True, max_lines=2)
+        self._text(spec.get("subtitle", ""), 50, 825, 24, 650, SAND, True, max_lines=3)
+        self._text(self._body(spec), 50, 670, 18, 650, WHITE, max_lines=8)
 
-    def _evidence_page(self, section, claim, items, part):
-        self._new_page(PAPER)
-        self._text("IMAGE EVIDENCE", 100, 1000, 16, 300, STONE, True)
-        suffix = f" · {part}" if part > 1 else ""
-        self._text(f"支持证据 · 边界反例{suffix}", 100, 940, 38, 980)
-        self._text(claim["conclusion"], 100, 875, 18, 1600, STONE, max_lines=2)
-        tile_width, tile_height = 260, 330
-        for index, (image_id, role) in enumerate(items):
-            column, row = index % 6, index // 6
-            x, y = 100 + column * 295, 485 - row * 410
-            self._photo(image_id, x, y, tile_width, tile_height)
-            self.canvas.setFillColor(INK if role == "支持证据" else STONE)
-            self.canvas.rect(x, y + tile_height - 7, tile_width, 7, fill=1, stroke=0)
-            self._text(role, x, y - 27, 14, 105, INK, True)
-            meta = self.images[image_id]
-            label = f"{meta.get('store_id', '')} · {meta.get('category', '')}"
-            self._text(label, x + 112, y - 27, 12, 148, STONE, max_lines=1)
-            self.displayed_evidence_ids.append(image_id)
-        self._finish_page()
+    def _draw_roadmap(self, spec):
+        self._text(spec["title"], 95, 900, 44, 1500, WHITE, True, max_lines=2)
+        phases = [("PHASE 01", "统一底层拍摄逻辑"), ("PHASE 02", "根据商品决定首图拍法"), ("PHASE 03", "建立分品类主图模板")]
+        for index, (phase, label) in enumerate(phases):
+            x = 95 + index * 600
+            self._text(phase, x, 580, 20, 300, SAND, True)
+            self._text(label, x, 500, 30, 500, WHITE, True, max_lines=3)
 
-    def closing(self, report):
-        self._new_page(INK)
-        self._text("FROM VARIETY TO SYSTEM", 110, 965, 18, 700, SAND, True)
-        self._text("把丰富视觉资产，\n变成可重复的品牌系统。", 110, 760, 64, 1250, WHITE)
-        last = report["sections"][-1]
-        self._text(last["summary"], 110, 430, 25, 1050, WHITE, max_lines=4)
-        self._text("ALORUH · VISUAL DIAGNOSTIC", 1430, 90, 16, 390, SAND, True)
-        self._finish_page()
+    def _draw_four_series(self, spec):
+        self._header(spec)
+        labels = ["CASUAL OUTING", "ROMANTIC DATE", "VACATION SUN-KISSED", "PARTY NIGHT OUT"]
+        for index, (image_id, label) in enumerate(zip(self._take(spec, 4), labels)):
+            x = index * 480
+            self._photo(image_id, x, 0, 480, 900, .12)
+            self._text(label, x + 24, 120, 17, 420, WHITE, True, max_lines=2)
 
-    def save(self):
-        self.canvas.save()
+    def _draw_flow(self, spec):
+        self._header(spec)
+        self._text("趋势提取  ->  搭配转译  ->  首图更新", 55, 865, 28, 1200, INK, True)
+        for index, image_id in enumerate(self._take(spec, 5)):
+            x = 55 + index * 365
+            self._photo(image_id, x, 140, 330, 620)
+            if index < 4:
+                self._text("->", x + 337, 470, 20, 35, STONE, True)
+
+    def _draw_grid_compare(self, spec):
+        self._text(spec["title"], 30, 1010, 22, 180, INK, True)
+        self._grid(self._take(spec, 8), 500, 30, 1360, 1000, 4, 10)
+
+    def _draw_plan(self, spec):
+        self._text(spec["title"], 110, 800, 30, 240, INK, True)
+        self._text(spec["subtitle"], 110, 450, 22, 260, STONE, True, max_lines=3)
+        self._grid(self._take(spec, 8), 390, 35, 1460, 1000, 4, 10)

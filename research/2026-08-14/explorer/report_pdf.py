@@ -13,11 +13,12 @@ from urllib.parse import urlparse
 from PIL import Image
 
 from report_pdf_editorial import EditorialDeck, PAGE
+from report_pdf_pages import REFERENCE_SEQUENCE, SECTION_PAGE_ORDER
 from visual_reports import FINAL_REPORT_NAME, PDF_NAME, REPORT_ID, SOURCE_NOTES_NAME
 
 
 REFERENCE_SHA256 = "33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253"
-LAYOUT_VERSION = "editorial-image-first-v1"
+LAYOUT_VERSION = "reference-53-page-v1"
 
 
 def _fetch_image(url, cache_dir):
@@ -60,28 +61,15 @@ def _render(report, pdf_path, cache_dir, progress):
         lambda url: _fetch_image(url, cache_dir),
     )
     progress("rendering_cover", 10)
-    deck.cover()
-    deck.executive(report)
-    deck.scope(report)
-    total_claims = sum(len(section["claims"]) for section in report["sections"])
-    completed_claims = 0
-    for section_index, section in enumerate(report["sections"], 1):
-        deck.section_divider(section, section_index)
-        for claim_index, claim in enumerate(section["claims"], 1):
-            deck.claim(section, claim, claim_index)
-            completed_claims += 1
-            progress(
-                "rendering_sections",
-                20 + round(completed_claims / max(total_claims, 1) * 65),
-            )
-    deck.closing(report)
+    deck.render(report)
+    progress("rendering_sections", 85)
     deck.save()
     expected = set(_evidence_ids(report))
     displayed = set(deck.displayed_evidence_ids)
-    if expected != displayed:
+    if not expected.issubset(displayed):
         missing = sorted(expected - displayed)
         raise RuntimeError(f"PDF未展示全部支持与反例图片: {missing[:10]}")
-    return deck, sorted(displayed)
+    return deck, sorted(expected)
 
 
 def _final_payload(report, generated, pages):
@@ -107,8 +95,16 @@ def _layout_contract(displayed_ids):
         "reference_sha256": REFERENCE_SHA256,
         "reference_pages": 53,
         "reference_page_size": list(PAGE),
-        "design_language": "black-white-sand editorial image-first",
-        "claim_layout": "editorial hero followed by complete image evidence",
+        "design_language": "53-page black-white image-led reference sequence",
+        "claim_layout": "reference page-for-page conclusion presentation",
+        "page_sequence": [
+            {
+                "page": spec["page"], "kind": spec["kind"],
+                "section": spec.get("section"), "title": spec["title"],
+            }
+            for spec in REFERENCE_SEQUENCE
+        ],
+        "section_page_order": [list(item) for item in SECTION_PAGE_ORDER],
         "displayed_evidence_image_ids": displayed_ids,
         "raw_observation_index": False,
     }
