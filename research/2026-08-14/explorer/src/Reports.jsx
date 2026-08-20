@@ -95,7 +95,8 @@ function ReportAnalysisDraft({ job, onReview }) {
     <section className="report-summary"><div><span>REPORT-SPECIFIC ANALYSIS</span>
       <h2>报告专项分析草稿</h2><p>这是为最终视觉诊断 PDF 重新执行的分析，不是旧维度聚合结果。</p></div>
       <dl><div><dt>目标图片</dt><dd>{formatNumber(result.scope?.target_images)}</dd></div>
-        <div><dt>竞品全量分母</dt><dd>{formatNumber(result.scope?.competitor_population_images)}</dd></div>
+        <div><dt>竞品全量分母</dt><dd>{result.scope?.competitor_population_images == null
+          ? "旧版未记录" : formatNumber(result.scope.competitor_population_images)}</dd></div>
         <div><dt>竞品高清证据</dt><dd>{formatNumber(result.scope?.competitor_images)}</dd></div>
         <div><dt>PDF Section</dt><dd>{result.sections?.length || 0}</dd></div></dl></section>
     <UsageAudit analysis={job} />
