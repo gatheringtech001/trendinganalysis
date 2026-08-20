@@ -194,7 +194,9 @@ export default function Reports() {
   useEffect(() => { refresh().catch((reason) => setError(reason.message)); }, []);
   useEffect(() => {
     if (!running && !["queued", "running"].includes(generation?.status)) return undefined;
-    const timer = window.setTimeout(() => {
+    let cancelled = false;
+    let timer;
+    const poll = () => {
       const requests = [refresh()];
       if (["queued", "running"].includes(generation?.status)) {
         requests.push(api.reportGeneration(generation.job_id).then((value) => {
@@ -202,9 +204,17 @@ export default function Reports() {
           return value.status === "complete" ? refresh() : value;
         }));
       }
-      Promise.all(requests).catch((reason) => setError(reason.message));
-    }, 1000);
-    return () => window.clearTimeout(timer);
+      Promise.all(requests)
+        .catch((reason) => setError(reason.message))
+        .finally(() => {
+          if (!cancelled) timer = window.setTimeout(poll, 1000);
+        });
+    };
+    timer = window.setTimeout(poll, 1000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [running, generation?.status, generation?.job_id]);
   const start = () => api.startReportAnalysis({ target_store: "aloruh_shein",
     categories: ["TOPS", "SKIRTS"] })
