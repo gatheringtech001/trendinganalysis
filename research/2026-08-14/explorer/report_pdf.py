@@ -59,6 +59,11 @@ def _chinese_summary(value):
     return str(value).replace("Tops", "上衣").replace("Skirts", "半身裙")
 
 
+def _approval_summary(report):
+    review = report["approved_detailed"]["review"]
+    return f"精细分析报告 · {review['approved_sections']}/{review['total_sections']} 章节通过"
+
+
 def _fetch_image(url, cache_dir):
     parsed = urlparse(str(url))
     if parsed.scheme not in {"http", "https"}:
@@ -170,6 +175,7 @@ def _draw_summary(deck, report):
         ("样本", f"{report['sample_count']} 张首图"),
         ("范围", "阿洛如（希音）· 上衣与半身裙 · 商品封面图"),
         ("证据", f"{len(report['sections'])}个章节 · 完整源记录编号"),
+        ("审核", _approval_summary(report)),
         ("边界", "不使用曝光、点击、销售或ROI数据"),
     ):
         deck.canvas.setFillColor(PAPER)
@@ -294,6 +300,7 @@ def build_visual_report(report, output_dir, progress=lambda _stage, _value: None
             "source_records": [row["record_id"] for row in report["source_records"]],
             "excluded_topics": report.get("excluded_metrics", []),
             "image_failures": deck.image_failures,
+            "approved_detailed": report["approved_detailed"],
         }
         notes_path = temporary / NOTES_NAME
         notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -304,4 +311,12 @@ def build_visual_report(report, output_dir, progress=lambda _stage, _value: None
         "report_id": report["report_id"], "generated_at": generated,
         "pages": deck.page, "sample_count": report["sample_count"],
         "image_failures": len(deck.image_failures),
+        "detailed_job_id": report["approved_detailed"]["job_id"],
+        "upstream_detailed_usage": report["approved_detailed"].get("usage"),
+        "usage": {
+            "api_calls": 0, "input_tokens": 0, "cached_input_tokens": 0,
+            "output_tokens": 0, "reasoning_tokens": 0, "total_tokens": 0,
+            "estimated_cost_usd": 0,
+            "note": "PDF排版在本地完成，未调用模型",
+        },
     }

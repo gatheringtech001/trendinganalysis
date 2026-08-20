@@ -133,6 +133,7 @@ class VisualReportCatalog:
             "source_records": records,
             "dimension_coverage": {"analyzed": 12, "pending": 3, "target": 15},
             "excluded_metrics": notes.get("excluded_topics", []),
+            "approved_detailed": notes.get("approved_detailed"),
         }
 
     def report_file(self, report_id: str) -> Path | None:
@@ -165,6 +166,12 @@ class VisualReportCatalog:
                     "updated_at": result_path.stat().st_mtime,
                 })
         return sorted(rows, key=lambda row: row["updated_at"], reverse=True)
+
+    def get_detailed(self, job_id) -> dict | None:
+        return next(
+            (row for row in self.list_detailed() if row["job_id"] == job_id),
+            None,
+        )
 
     @staticmethod
     def _section(section_id, title, description, evidence, claims):

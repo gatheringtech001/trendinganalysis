@@ -4,7 +4,7 @@ import { CompletedAnalysis } from "./DetailedVisualAnalysis";
 import { dimensionLabels, formatAnalysisTag } from "./imageAnalysis";
 import ProductImage from "./Media";
 
-const tabs = { final: "最终视觉诊断", detailed: "Detailed 高清精细分析" };
+const tabs = { detailed: "1. Detailed 审核", final: "2. 最终报告" };
 const generationStages = {
   queued: "排队中", aggregating: "聚合分析数据", downloading_evidence_images: "获取证据图片",
   rendering_sections: "生成报告章节", rendering_evidence_appendix: "生成证据附录",
@@ -133,7 +133,19 @@ function SourceRecordAppendix({ records }) {
   </section>;
 }
 
-function FinalReport({ report, generation, onGenerate }) {
+function UsageAudit({ generation, detailed }) {
+  const upstream = generation?.result?.upstream_detailed_usage || detailed?.usage || {};
+  const pdfUsage = generation?.result?.usage || {};
+  return <section className="generation-usage-audit">
+    <div><strong>上游 Detailed 分析</strong><span>{formatNumber(upstream.total_tokens)} Token</span>
+      <span>${Number(upstream.estimated_cost_usd || 0).toFixed(4)}</span></div>
+    <div><strong>最终 PDF 生成</strong><span>{formatNumber(pdfUsage.total_tokens)} Token</span>
+      <span>${Number(pdfUsage.estimated_cost_usd || 0).toFixed(4)}</span></div>
+    <p>最终 PDF 仅做本地排版，不调用模型；费用不会重复计算。</p>
+  </section>;
+}
+
+function FinalReport({ detailed, report, generation, onGenerate }) {
   const [showRecords, setShowRecords] = useState(false);
   if (!report) return <div className="loading">正在生成可追溯报告视图…</div>;
   const fileUrl = api.reportFileUrl(report.report_id);
@@ -146,12 +158,15 @@ function FinalReport({ report, generation, onGenerate }) {
       <div className="report-file-actions">
         <button disabled={["queued", "running"].includes(generation?.status)}
           onClick={onGenerate} type="button">
-          {["queued", "running"].includes(generation?.status) ? "正在生成…" : "生成新报告"}
+          {["queued", "running"].includes(generation?.status) ? "正在生成…" : "生成最终报告"}
         </button>
         {report.has_pdf ? <><a href={fileUrl} target="_blank" rel="noreferrer">浏览PDF</a>
           <a download href={fileUrl}>下载PDF</a></> : null}
       </div>
     </section>
+    <section className="approved-detailed-source"><strong>已通过审核的 Detailed 报告</strong>
+      <code>{detailed?.job_id}</code><span>7 / 7 Section 满意</span></section>
+    <UsageAudit detailed={detailed} generation={generation} />
     {generation ? <section className={`report-generation ${generation.status}`}>
       <div><strong>{generationStages[generation.stage] || generation.stage}</strong>
         <span>{generation.progress || 0}%</span></div>
@@ -174,27 +189,36 @@ function FinalReport({ report, generation, onGenerate }) {
   </div>;
 }
 
-function DetailedReports({ rows }) {
-  const [selected, setSelected] = useState(rows[0]?.job_id || "");
-  useEffect(() => { if (!selected && rows[0]) setSelected(rows[0].job_id); }, [rows, selected]);
+function DetailedReports({ onReady, onReview, onSelect, reviewSaving, rows, selected }) {
   const job = rows.find((row) => row.job_id === selected);
   if (!rows.length) return <div className="empty-results">还没有已保存的Detailed高清分析任务。</div>;
   return <div className="detailed-report-history">
     <aside>{rows.map((row) => <button className={selected === row.job_id ? "active" : ""}
-      key={row.job_id} onClick={() => setSelected(row.job_id)} type="button">
+      key={row.job_id} onClick={() => onSelect(row.job_id)} type="button">
       <strong>{Object.values(row.filters || {}).map(formatAnalysisTag).join(" · ") || "自定义选图"}</strong>
       <span>{(row.stores || []).map((store) => stores[store] || store).join("、")}</span>
-      <small>{row.status === "complete" ? "已完成" : row.status}</small>
+      <small>{row.status === "complete" ? `审核 ${row.review?.approved_sections || 0} / ${row.review?.total_sections || 7}` : row.status}</small>
     </button>)}</aside>
-    <main>{job ? <CompletedAnalysis job={job} /> : null}</main>
+    <main>{job ? <><section className={`review-workflow ${job.review?.ready_for_final ? "ready" : "pending"}`}>
+      <div><strong>Detailed Section 审核</strong><span>
+        已审核 {job.review?.reviewed_sections || 0} / {job.review?.total_sections || 7}，
+        满意 {job.review?.approved_sections || 0} / {job.review?.total_sections || 7}
+      </span></div>
+      {job.review?.rejected_sections ? <p>有 {job.review.rejected_sections} 个 Section 待按建议修订，最终报告暂时锁定。</p> : null}
+      {job.review?.ready_for_final ? <button onClick={onReady} type="button">进入最终报告生成</button>
+        : <p>请逐项审核下方全部 Section；只有全部 👍 满意后才能生成最终报告。</p>}
+    </section><CompletedAnalysis job={job} onReview={(sectionId, decision, suggestion) =>
+      onReview(job.job_id, sectionId, decision, suggestion)} reviewSaving={reviewSaving} /></> : null}</main>
   </div>;
 }
 
 export default function Reports() {
-  const [tab, setTab] = useState("final");
+  const [tab, setTab] = useState("detailed");
   const [report, setReport] = useState(null);
   const [detailed, setDetailed] = useState([]);
   const [generation, setGeneration] = useState(null);
+  const [selectedDetailed, setSelectedDetailed] = useState("");
+  const [reviewSaving, setReviewSaving] = useState("");
   const [error, setError] = useState("");
   const loadReport = () => api.reports().then((reports) => {
     const first = reports.items?.[0];
@@ -206,6 +230,7 @@ export default function Reports() {
       if (!active) return;
       setReport(value);
       setDetailed(jobs.items || []);
+      setSelectedDetailed((current) => current || jobs.items?.[0]?.job_id || "");
     }).catch((reason) => { if (active) setError(reason.message); });
     return () => { active = false; };
   }, []);
@@ -221,15 +246,28 @@ export default function Reports() {
   }, [generation]);
   const generate = () => {
     setError("");
-    api.generateReport().then(setGeneration).catch((reason) => setError(reason.message));
+    api.generateReport(selectedDetailed).then(setGeneration).catch((reason) => setError(reason.message));
   };
+  const reviewSection = (jobId, sectionId, decision, suggestion) => {
+    setError("");
+    setReviewSaving(sectionId);
+    return api.reviewDetailedSection(jobId, sectionId, decision, suggestion).then((updated) => {
+      setDetailed((rows) => rows.map((row) => row.job_id === jobId ? updated : row));
+    }).catch((reason) => setError(reason.message)).finally(() => setReviewSaving(""));
+  };
+  const detailedJob = detailed.find((row) => row.job_id === selectedDetailed);
+  const finalReady = Boolean(detailedJob?.review?.ready_for_final);
   return <div className="reports-page">
     <nav className="report-tabs" aria-label="报告类型">{Object.entries(tabs).map(([key, label]) => (
       <button aria-current={tab === key ? "page" : undefined} className={tab === key ? "active" : ""}
-        key={key} onClick={() => setTab(key)} type="button">{label}</button>
+        disabled={key === "final" && !finalReady} key={key} onClick={() => setTab(key)}
+        title={key === "final" && !finalReady ? "请先完成Detailed报告Section审核" : ""}
+        type="button">{label}</button>
     ))}</nav>
     {error ? <div className="error-banner">{error}</div> : null}
-    {tab === "final" ? <FinalReport generation={generation} onGenerate={generate}
-      report={report} /> : <DetailedReports rows={detailed} />}
+    {tab === "final" ? <FinalReport detailed={detailedJob} generation={generation}
+      onGenerate={generate} report={report} /> : <DetailedReports onReady={() => setTab("final")}
+      onReview={reviewSection} onSelect={setSelectedDetailed} reviewSaving={reviewSaving}
+      rows={detailed} selected={selectedDetailed} />}
   </div>;
 }

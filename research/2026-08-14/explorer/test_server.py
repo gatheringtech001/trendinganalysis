@@ -8,6 +8,8 @@ from server import (
     AnalysisBusyError, DetailedAnalysisJobs, ResearchStore, VisualReportJobs,
     build_database,
 )
+from report_reviews import DETAILED_SECTION_IDS, DetailedReviewStore
+from report_pdf import _approval_summary
 from visual_reports import VisualReportCatalog
 
 
@@ -494,14 +496,46 @@ class ResearchStoreTest(unittest.TestCase):
                     set(claim["evidence"]),
                 )
 
-    def test_visual_report_job_generates_new_pdf_asynchronously(self):
+    def test_detailed_review_requires_suggestions_and_all_approvals(self):
+        reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
+        job_id = "detailed-job-one"
+
+        with self.assertRaises(ValueError):
+            reviews.save(job_id, DETAILED_SECTION_IDS[0], {
+                "decision": "down", "suggestion": "",
+            })
+        for section_id in DETAILED_SECTION_IDS[:-1]:
+            reviews.save(job_id, section_id, {"decision": "up"})
+        pending = reviews.summary(job_id)
+        self.assertFalse(pending["ready_for_final"])
+        self.assertEqual(len(DETAILED_SECTION_IDS) - 1, pending["approved_sections"])
+        with self.assertRaises(ValueError):
+            reviews.require_ready(job_id)
+
+        complete = reviews.save(
+            job_id, DETAILED_SECTION_IDS[-1], {"decision": "up"},
+        )
+        self.assertTrue(complete["ready_for_final"])
+        self.assertEqual(len(DETAILED_SECTION_IDS), complete["approved_sections"])
+
+    def test_visual_report_job_requires_approved_detailed_report(self):
         pdf_dir = Path(self.temp.name) / "generated-report"
+        reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
+        detailed_job_id = "detailed-job-one"
 
         class FakeCatalog:
             def get(self, report_id):
                 return {
                     "report_id": report_id, "sample_count": 415,
                     "source_records": [{"record_id": "record-1"}],
+                }
+
+            def get_detailed(self, job_id):
+                if job_id != detailed_job_id:
+                    return None
+                return {
+                    "job_id": job_id, "status": "complete",
+                    "usage": {"total_tokens": 123, "estimated_cost_usd": 0.01},
                 }
 
         def fake_runner(report, output_dir, progress):
@@ -516,8 +550,14 @@ class ResearchStoreTest(unittest.TestCase):
             )
             return {"pages": 8, "sample_count": report["sample_count"]}
 
-        jobs = VisualReportJobs(FakeCatalog(), pdf_dir, runner=fake_runner)
-        created = jobs.submit({})
+        jobs = VisualReportJobs(
+            FakeCatalog(), pdf_dir, reviews=reviews, runner=fake_runner,
+        )
+        with self.assertRaises(ValueError):
+            jobs.submit({"detailed_job_id": detailed_job_id})
+        for section_id in DETAILED_SECTION_IDS:
+            reviews.save(detailed_job_id, section_id, {"decision": "up"})
+        created = jobs.submit({"detailed_job_id": detailed_job_id})
         deadline = time.time() + 2
         status = jobs.get(created["job_id"])
         while status["status"] not in {"complete", "failed"} and time.time() < deadline:
@@ -527,9 +567,19 @@ class ResearchStoreTest(unittest.TestCase):
         self.assertEqual("complete", status["status"])
         self.assertEqual(100, status["progress"])
         self.assertEqual(8, status["result"]["pages"])
+        self.assertEqual(0, status["result"]["usage"]["total_tokens"])
+        self.assertEqual(123, status["result"]["upstream_detailed_usage"]["total_tokens"])
         self.assertTrue((pdf_dir / "Aloruh纯视觉诊断-图片结论版.pdf").is_file())
         with self.assertRaises(ValueError):
             jobs.submit({"unsupported": True})
+
+    def test_pdf_approval_summary_uses_readable_review_counts(self):
+        report = {"approved_detailed": {
+            "job_id": "visual-analysis-sol-smoke",
+            "review": {"approved_sections": 7, "total_sections": 7},
+        }}
+
+        self.assertEqual("精细分析报告 · 7/7 章节通过", _approval_summary(report))
 
     def test_visual_report_catalog_lists_persisted_detailed_runs(self):
         detailed_root = Path(self.temp.name) / "detailed"

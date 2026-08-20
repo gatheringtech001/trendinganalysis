@@ -44,10 +44,10 @@ export const api = {
   reports: () => request("/api/reports"),
   report: (reportId) => request(`/api/reports/${encodeURIComponent(reportId)}`),
   reportFileUrl: (reportId) => `${apiBase}/api/reports/${encodeURIComponent(reportId)}/file`,
-  generateReport: () => request("/api/reports/generate", {
+  generateReport: (detailedJobId) => request("/api/reports/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: "{}",
+    body: JSON.stringify({ detailed_job_id: detailedJobId }),
   }),
   reportGeneration: (jobId) => request(
     `/api/report-generation/${encodeURIComponent(jobId)}`,
@@ -67,6 +67,14 @@ export const api = {
   }),
   detailedAnalysis: (jobId) => request(
     `/api/detailed-analysis/${encodeURIComponent(jobId)}`,
+  ),
+  reviewDetailedSection: (jobId, sectionId, decision, suggestion = "") => request(
+    `/api/detailed-analysis/${encodeURIComponent(jobId)}/reviews/${encodeURIComponent(sectionId)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision, suggestion }),
+    },
   ),
   product: (store, productId) =>
     request(`/api/products/${encodeURIComponent(store)}/${encodeURIComponent(productId)}`),

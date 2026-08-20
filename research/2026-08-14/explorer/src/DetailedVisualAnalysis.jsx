@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { formatNumber, stores as storeNames } from "./api";
 import ProductImage from "./Media";
 
@@ -23,14 +23,51 @@ function TextList({ items }) {
 function UsageSummary({ usage }) {
   if (!usage) return null;
   return (
-    <dl className="detailed-usage">
+    <><dl className="detailed-usage">
       <div><dt>总耗时</dt><dd>{Number(usage.wall_clock_seconds || 0).toFixed(1)} 秒</dd></div>
       <div><dt>API 调用</dt><dd>{formatNumber(usage.api_calls)}</dd></div>
-      <div><dt>总 Token</dt><dd>{formatNumber(usage.total_tokens)}</dd></div>
+      <div><dt>输入 Token</dt><dd>{formatNumber(usage.input_tokens)}</dd></div>
+      <div><dt>缓存输入 Token</dt><dd>{formatNumber(usage.cached_input_tokens)}</dd></div>
+      <div><dt>输出 Token</dt><dd>{formatNumber(usage.output_tokens)}</dd></div>
       <div><dt>Reasoning Token</dt><dd>{formatNumber(usage.reasoning_tokens)}</dd></div>
+      <div><dt>总 Token</dt><dd>{formatNumber(usage.total_tokens)}</dd></div>
       <div><dt>预估费用</dt><dd>${Number(usage.estimated_cost_usd || 0).toFixed(4)}</dd></div>
-    </dl>
+    </dl><p className="detailed-pricing-note">{usage.pricing?.source || "费用为运行记录中的预估值"}</p></>
   );
+}
+
+function SectionReview({ sectionId, title, review, onReview, saving }) {
+  const current = review?.sections?.[sectionId] || {};
+  const [editingDown, setEditingDown] = useState(current.decision === "down");
+  const [suggestion, setSuggestion] = useState(current.suggestion || "");
+  useEffect(() => {
+    setEditingDown(current.decision === "down");
+    setSuggestion(current.suggestion || "");
+  }, [current.decision, current.suggestion]);
+  return <div className={`section-review ${current.decision || "pending"}`}>
+    <div><strong>这个 Section 是否满意？</strong><span>{current.decision === "up"
+      ? "已通过" : current.decision === "down" ? "待按建议修订" : "待审核"}</span></div>
+    <div className="section-review-actions">
+      <button aria-label={`${title}满意`} aria-pressed={current.decision === "up"}
+        disabled={saving} onClick={() => onReview(sectionId, "up", "")} type="button">👍 满意</button>
+      <button aria-label={`${title}不满意`} aria-pressed={current.decision === "down"}
+        disabled={saving} onClick={() => setEditingDown(true)} type="button">👎 不满意</button>
+    </div>
+    {editingDown ? <div className="section-review-suggestion">
+      <label htmlFor={`review-${sectionId}`}>修改建议（必填）</label>
+      <textarea id={`review-${sectionId}`} maxLength="2000" placeholder="说明需要修改的结论、证据或表达方式"
+        value={suggestion} onChange={(event) => setSuggestion(event.target.value)} />
+      <button disabled={saving || !suggestion.trim()}
+        onClick={() => onReview(sectionId, "down", suggestion)} type="button">
+        {saving ? "保存中…" : "保存修改建议"}
+      </button>
+    </div> : null}
+  </div>;
+}
+
+function ReviewableSection({ children, reviewProps, sectionId, title }) {
+  return <section><h3>{title}</h3>{children}<SectionReview sectionId={sectionId}
+    title={title} {...reviewProps} /></section>;
 }
 
 function StoreResults({ rows }) {
@@ -100,21 +137,39 @@ function ImageResults({ analysisRows, images }) {
   );
 }
 
-export function CompletedAnalysis({ job }) {
+export function CompletedAnalysis({ job, onReview, reviewSaving }) {
   const result = job.result || {};
   const analysis = result.analysis || {};
+  const reviewProps = {
+    review: job.review, onReview,
+    saving: reviewSaving,
+  };
   return (
     <div className="detailed-results">
       <UsageSummary usage={job.usage} />
-      <section><h3>总体视觉结论</h3><p>{analysis.selection_thesis}</p></section>
+      <ReviewableSection reviewProps={reviewProps} sectionId="overall_conclusion" title="总体视觉结论">
+        <p>{analysis.selection_thesis}</p>
+      </ReviewableSection>
       <div className="detailed-two-column">
-        <section><h3>共同模式</h3><TextList items={analysis.shared_patterns} /></section>
-        <section><h3>跨店差异</h3><TextList items={analysis.cross_store_differences} /></section>
+        <ReviewableSection reviewProps={reviewProps} sectionId="shared_patterns" title="共同模式">
+          <TextList items={analysis.shared_patterns} />
+        </ReviewableSection>
+        <ReviewableSection reviewProps={reviewProps} sectionId="cross_store_differences" title="跨店差异">
+          <TextList items={analysis.cross_store_differences} />
+        </ReviewableSection>
       </div>
-      <section><h3>各店铺视觉定位</h3><StoreResults rows={analysis.store_summaries} /></section>
-      <section><h3>推荐拍摄系统</h3><TextList items={analysis.recommended_shot_system} /></section>
-      <section><h3>A/B 测试假设</h3><Hypotheses rows={analysis.test_hypotheses} /></section>
-      <section><h3>逐图精细分析</h3><ImageResults analysisRows={analysis.images} images={result.images} /></section>
+      <ReviewableSection reviewProps={reviewProps} sectionId="store_positioning" title="各店铺视觉定位">
+        <StoreResults rows={analysis.store_summaries} />
+      </ReviewableSection>
+      <ReviewableSection reviewProps={reviewProps} sectionId="recommended_shot_system" title="推荐拍摄系统">
+        <TextList items={analysis.recommended_shot_system} />
+      </ReviewableSection>
+      <ReviewableSection reviewProps={reviewProps} sectionId="ab_test_hypotheses" title="A/B 测试假设">
+        <Hypotheses rows={analysis.test_hypotheses} />
+      </ReviewableSection>
+      <ReviewableSection reviewProps={reviewProps} sectionId="image_analysis" title="逐图精细分析">
+        <ImageResults analysisRows={analysis.images} images={result.images} />
+      </ReviewableSection>
     </div>
   );
 }
