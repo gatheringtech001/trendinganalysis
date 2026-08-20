@@ -37,6 +37,10 @@ function ImageStrip({ ids, imageLookup }) {
 
 function ClaimEvidence({ claim, imageLookup }) {
   const evidence = claim.evidence || {};
+  const evidenceBrands = [...new Set([
+    ...(evidence.support_image_ids || []), ...(evidence.example_image_ids || []),
+  ].map((id) => imageLookup.get(id)?.store_id).filter(Boolean)
+    .map((storeId) => stores[storeId] || storeId))];
   return <article className="report-claim">
     <span>结论</span><h4>{claim.conclusion}</h4>
     <div className="claim-derivation"><strong>怎么得到的</strong><p>{claim.derivation}</p></div>
@@ -46,11 +50,16 @@ function ClaimEvidence({ claim, imageLookup }) {
       <div><dt>观察字段</dt><dd>{(evidence.observation_fields || []).join("、")}</dd></div>
       <div><dt>支持 / 反例</dt><dd>{evidence.support_image_ids?.length || 0} / {evidence.counterexample_image_ids?.length || 0}</dd></div>
     </dl>
+    {evidenceBrands.length ? <p className="evidence-brands"><b>证据店铺：</b>{evidenceBrands.join("、")}</p> : null}
     <strong className="evidence-subtitle">代表性证据图片</strong>
     <ImageStrip ids={evidence.example_image_ids || []} imageLookup={imageLookup} />
-    <details className="source-record-list"><summary>查看全部支持与反例图片ID</summary>
-      <p><b>支持：</b>{(evidence.support_image_ids || []).join("、")}</p>
-      <p><b>反例：</b>{(evidence.counterexample_image_ids || []).join("、") || "无"}</p>
+    <details className="source-record-list"><summary>查看全部支持与反例图片</summary>
+      <strong>支持图片（{evidence.support_image_ids?.length || 0}）</strong>
+      <ImageStrip ids={evidence.support_image_ids || []} imageLookup={imageLookup} />
+      <strong>反例图片（{evidence.counterexample_image_ids?.length || 0}）</strong>
+      {evidence.counterexample_image_ids?.length
+        ? <ImageStrip ids={evidence.counterexample_image_ids} imageLookup={imageLookup} />
+        : <p>无反例图片</p>}
     </details>
   </article>;
 }
@@ -92,6 +101,10 @@ function ReportAnalysisDraft({ job, onReview }) {
     (result.image_observations || []).map((row) => [row.image_id, row]),
   ), [result.image_observations]);
   return <div className="report-analysis-draft">
+    {result.scope?.competitor_population_images == null ? <aside className="legacy-report-notice">
+      这是旧版报告：三家竞品各最多 12 张分位选图，未按品牌拆分结论。新任务会使用竞品全量维度分布，
+      再选择分层高清证据，并强制分别分析 Princess Polly、Motel Rocks、PrettyLittleThing。
+    </aside> : null}
     <section className="report-summary"><div><span>REPORT-SPECIFIC ANALYSIS</span>
       <h2>报告专项分析草稿</h2><p>这是为最终视觉诊断 PDF 重新执行的分析，不是旧维度聚合结果。</p></div>
       <dl><div><dt>目标图片</dt><dd>{formatNumber(result.scope?.target_images)}</dd></div>
@@ -131,11 +144,12 @@ function StartAnalysis({ disabled, onStart }) {
   return <section className="report-analysis-start">
     <span>ON-DEMAND REPORT ANALYSIS</span><h2>主动生成报告专项分析</h2>
     <p>点击后才会开始：下载 Aloruh 上衣与半身裙全部首图高清版本，逐图使用 GPT-5.6 Sol 分析；
-      三家竞品先按全量视觉维度分布分层，再下载典型图和边界图作为视觉差距证据。不会随机抽图，
+      三家竞品的全部封面图先作为维度分布分母，再按店铺、品类和六个视觉维度选择高频典型图、
+      覆盖率至少约 0.5% 的低频边界图，并按六维组合视觉簇补充代表图。不会随机抽图，
       也不会直接复用旧的维度结论。</p>
     <dl><div><dt>目标范围</dt><dd>Aloruh(SHEIN) · Tops + Skirts · SKU封面图</dd></div>
       <div><dt>成品结构</dt><dd>品牌定位 / 商品展示 / 店铺视觉 / 竞品差距 / 升级方向</dd></div>
-      <div><dt>竞品选图</dt><dd>全量分布 → 品类与视觉维度分层 → 典型图 + 边界图</dd></div>
+      <div><dt>竞品选图</dt><dd>逐店铺全量分布 → 品类 × 六维度 → 高频典型 + ≥约0.5%低频边界 + 六维组合簇</dd></div>
       <div><dt>证据要求</dt><dd>逐图观察 + 支持图 + 反例图 + 代表图 + 推导方法</dd></div></dl>
     <button disabled={disabled} onClick={onStart} type="button">
       {disabled ? "报告专项分析运行中…" : "开始报告专项分析（会产生费用）"}</button>

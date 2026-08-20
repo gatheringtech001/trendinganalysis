@@ -4,7 +4,13 @@ import unittest
 from pathlib import Path
 
 from report_analysis_model import SECTION_IDS, observation_schema, report_schema
-from report_analysis_runner import SELECTION_DIMENSIONS, _select_rows
+from report_analysis_runner import (
+    COMPETITOR_BRANDS,
+    SELECTION_DIMENSIONS,
+    _compact_evidence,
+    _select_rows,
+    _validate_competitor_brand_claims,
+)
 
 
 class ReportAnalysisModelTest(unittest.TestCase):
@@ -70,6 +76,42 @@ class ReportAnalysisModelTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "incomplete visual-dimension coverage"):
                 _select_rows(db_path, "aloruh_shein", ["TOPS", "SKIRTS"])
+
+    def test_synthesis_evidence_keeps_image_store_context(self):
+        items = [{
+            "image_id": "motel-1", "store_id": "motel", "product_id": "p1",
+            "category": "TOPS", "role": "competitor",
+            "selection_reasons": [{"evidence_role": "typical"}],
+        }]
+        batches = [{"observations": [{"image_id": "motel-1"}], "pattern_candidates": []}]
+
+        evidence = _compact_evidence(batches, items)
+
+        self.assertEqual("motel", evidence["image_contexts"][0]["store_id"])
+        self.assertEqual("typical", evidence["image_contexts"][0]["selection_reasons"][0]["evidence_role"])
+
+    def test_competitor_gap_requires_named_claim_with_matching_brand_image(self):
+        items = []
+        claims = []
+        for store, label in COMPETITOR_BRANDS.items():
+            image_id = f"{store}-image"
+            items.append({"image_id": image_id, "store_id": store})
+            claims.append({
+                "conclusion": f"{label} 的商品图更强调标准棚拍",
+                "derivation": f"使用 {label} 的分层证据复核",
+                "evidence": {
+                    "support_image_ids": [image_id], "counterexample_image_ids": [],
+                    "example_image_ids": [image_id],
+                },
+            })
+        report = {"sections": [{"section_id": "competitive_gap", "claims": claims}]}
+
+        _validate_competitor_brand_claims(report, items)
+
+        claims[0]["evidence"]["support_image_ids"] = ["motel-image"]
+        claims[0]["evidence"]["example_image_ids"] = ["motel-image"]
+        with self.assertRaisesRegex(ValueError, "Princess Polly"):
+            _validate_competitor_brand_claims(report, items)
 
     @staticmethod
     def _build_selection_database(db_path, omit=None):

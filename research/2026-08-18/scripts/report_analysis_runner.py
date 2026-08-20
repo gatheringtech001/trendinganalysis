@@ -14,6 +14,11 @@ from report_analysis_model import AzureOpenAIReportAnalyzer, SECTION_IDS
 
 
 COMPETITOR_STORES = ("princess_polly", "motel", "prettylittlething")
+COMPETITOR_BRANDS = {
+    "princess_polly": "Princess Polly",
+    "motel": "Motel Rocks",
+    "prettylittlething": "PrettyLittleThing",
+}
 BATCH_SIZE = 8
 SELECTION_DIMENSIONS = (
     "occasion", "scene", "composition", "view_action", "visual_language", "styling",
@@ -239,7 +244,7 @@ def _public_image(item: dict) -> dict:
     }
 
 
-def _compact_evidence(batch_results: list[dict]) -> dict:
+def _compact_evidence(batch_results: list[dict], items: list[dict]) -> dict:
     return {
         "observations": [
             row for batch in batch_results for row in batch["observations"]
@@ -247,6 +252,12 @@ def _compact_evidence(batch_results: list[dict]) -> dict:
         "pattern_candidates": [
             row for batch in batch_results for row in batch["pattern_candidates"]
         ],
+        "image_contexts": [{
+            key: item.get(key) for key in (
+                "image_id", "store_id", "product_id", "category", "role",
+                "selection_reasons",
+            )
+        } for item in items],
     }
 
 
@@ -260,6 +271,34 @@ def _validate_claim_references(report: dict, known_ids: set[str]) -> None:
                 unknown = set(evidence[field]) - known_ids
                 if unknown:
                     raise ValueError(f"report claim references unknown images: {sorted(unknown)}")
+
+
+def _validate_competitor_brand_claims(report: dict, items: list[dict]) -> None:
+    section = next(
+        (row for row in report["sections"] if row["section_id"] == "competitive_gap"),
+        None,
+    )
+    if section is None:
+        raise ValueError("report is missing competitive_gap section")
+    image_stores = {item["image_id"]: item["store_id"] for item in items}
+    for store_id, brand in COMPETITOR_BRANDS.items():
+        valid = False
+        for claim in section["claims"]:
+            claim_text = f"{claim.get('conclusion', '')} {claim.get('derivation', '')}".lower()
+            if brand.lower() not in claim_text and store_id.lower() not in claim_text:
+                continue
+            evidence = claim.get("evidence") or {}
+            evidence_ids = (
+                evidence.get("support_image_ids", [])
+                + evidence.get("example_image_ids", [])
+            )
+            if any(image_stores.get(image_id) == store_id for image_id in evidence_ids):
+                valid = True
+                break
+        if not valid:
+            raise ValueError(
+                f"competitive_gap requires a named {brand} claim with matching brand evidence"
+            )
 
 
 def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
@@ -296,6 +335,7 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
             store["population_images"] for store in competitor_evidence["stores"].values()
         ),
         "competitor_sampling": "全量维度分布分层后选择典型图与边界图",
+        "competitor_brands": COMPETITOR_BRANDS,
         "competitor_selection_dimensions": list(SELECTION_DIMENSIONS),
         "position": 1, "excluded_metrics": ["曝光", "点击", "转化", "销量", "ROI"],
     }
@@ -324,11 +364,15 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
                 "analyzing_all_images",
                 35 + round(min(start + BATCH_SIZE, len(items)) / len(items) * 45),
             )
-        evidence = {**_compact_evidence(batches), "competitor_evidence": competitor_evidence}
+        evidence = {
+            **_compact_evidence(batches, items),
+            "competitor_evidence": competitor_evidence,
+        }
         _write_json(output / "image-observations.json", evidence)
         progress("synthesizing_report_sections", 85)
         report = analyzer.synthesize(evidence, scope)
         _validate_claim_references(report, {item["image_id"] for item in items})
+        _validate_competitor_brand_claims(report, items)
     except Exception:
         usage.finish("failed", completed_images=sum(len(batch["observations"]) for batch in batches))
         raise
@@ -374,6 +418,10 @@ def revise_report_section(args, progress=lambda _stage, _value: None) -> Path:
         _validate_claim_references(
             {"sections": [revised]}, {row["image_id"] for row in result["images"]},
         )
+        if args.section_id == "competitive_gap":
+            _validate_competitor_brand_claims(
+                {"sections": [revised]}, result["images"],
+            )
     except Exception:
         usage.finish("failed", completed_images=0)
         raise

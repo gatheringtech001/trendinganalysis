@@ -296,9 +296,11 @@ class AzureOpenAIReportAnalyzer:
         return (
             "基于逐图观察与批次模式，生成模仿品牌视觉诊断成品PDF结构的专项分析草稿。"
             "每条结论必须说明推导方法，列支持图、反例图、代表图、样本数和观察字段；"
-            "不得引用未提供的图片ID。目标店铺全量图片用于结论，竞品抽样只用于视觉差距。"
+            "不得引用未提供的图片ID。目标店铺全量图片用于结论，竞品高清分层证据集只用于视觉差距。"
             "竞品模式判断必须以competitor_evidence中的全量维度分布为分母，高清代表图只用于"
             "复核典型模式与边界反例，不得把代表图数量冒充全量占比。"
+            "competitive_gap必须分别包含Princess Polly、Motel Rocks、PrettyLittleThing三家品牌，"
+            "每家至少一条独立结论；结论或推导必须写出品牌名，支持图或代表图必须来自该品牌。"
             "不得写销售、流量、点击、转化或ROI结论。五个章节必须各出现一次："
             f"{roles}。范围：{json.dumps(scope, ensure_ascii=False)}"
         )

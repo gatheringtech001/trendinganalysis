@@ -148,9 +148,15 @@ def _draw_summary(deck, report):
     deck.start("执行摘要")
     y = 5.55 * inch
     scope = report["scope"]
+    competitor_population = scope.get("competitor_population_images")
+    competitor_value = (
+        f"{competitor_population} 张全量分母 · {scope['competitor_images']} 张分层高清证据"
+        if competitor_population is not None
+        else f"{scope['competitor_images']} 张旧版分位选图"
+    )
     metrics = (
         ("目标样本", f"{scope['target_images']} 张 Aloruh 首图"),
-        ("竞品证据", f"{scope['competitor_images']} 张分位抽样图"),
+        ("竞品证据", competitor_value),
         ("品类", "上衣与半身裙"),
         ("审核", _approval_summary(report)),
         ("边界", "不使用曝光、点击、转化、销量或ROI"),
