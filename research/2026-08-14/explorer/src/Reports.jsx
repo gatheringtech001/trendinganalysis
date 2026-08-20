@@ -5,6 +5,11 @@ import { dimensionLabels, formatAnalysisTag } from "./imageAnalysis";
 import ProductImage from "./Media";
 
 const tabs = { final: "最终视觉诊断", detailed: "Detailed 高清精细分析" };
+const generationStages = {
+  queued: "排队中", aggregating: "聚合分析数据", downloading_evidence_images: "获取证据图片",
+  rendering_sections: "生成报告章节", rendering_evidence_appendix: "生成证据附录",
+  publishing: "发布报告文件", complete: "生成完成", failed: "生成失败",
+};
 
 function EvidenceDetails({ evidence, title = "查看完整证据链" }) {
   const filters = Object.entries(evidence?.filters || {});
@@ -128,7 +133,7 @@ function SourceRecordAppendix({ records }) {
   </section>;
 }
 
-function FinalReport({ report }) {
+function FinalReport({ report, generation, onGenerate }) {
   const [showRecords, setShowRecords] = useState(false);
   if (!report) return <div className="loading">正在生成可追溯报告视图…</div>;
   const fileUrl = api.reportFileUrl(report.report_id);
@@ -139,10 +144,24 @@ function FinalReport({ report }) {
         <div><dt>维度</dt><dd>{report.dimension_coverage.target}</dd></div>
         <div><dt>Section</dt><dd>{report.sections.length}</dd></div></dl>
       <div className="report-file-actions">
-        <a href={fileUrl} target="_blank" rel="noreferrer">浏览PDF</a>
-        <a download href={fileUrl}>下载PDF</a>
+        <button disabled={["queued", "running"].includes(generation?.status)}
+          onClick={onGenerate} type="button">
+          {["queued", "running"].includes(generation?.status) ? "正在生成…" : "生成新报告"}
+        </button>
+        {report.has_pdf ? <><a href={fileUrl} target="_blank" rel="noreferrer">浏览PDF</a>
+          <a download href={fileUrl}>下载PDF</a></> : null}
       </div>
     </section>
+    {generation ? <section className={`report-generation ${generation.status}`}>
+      <div><strong>{generationStages[generation.stage] || generation.stage}</strong>
+        <span>{generation.progress || 0}%</span></div>
+      <progress max="100" value={generation.progress || 0} />
+      {generation.error ? <p>{generation.error}</p> : null}
+      {generation.status === "complete" ? <p>
+        已按当前数据重新生成 {generation.result?.pages} 页报告，覆盖
+        {formatNumber(generation.result?.sample_count)} 张图片。
+      </p> : null}
+    </section> : null}
     <div className="report-heatmaps"><AttentionHeatmap data={report.attention_heatmap} />
       <CombinationHeatmap data={report.combination_heatmap} /></div>
     <div className="report-sections">{report.sections.map((section) => (
@@ -175,25 +194,42 @@ export default function Reports() {
   const [tab, setTab] = useState("final");
   const [report, setReport] = useState(null);
   const [detailed, setDetailed] = useState([]);
+  const [generation, setGeneration] = useState(null);
   const [error, setError] = useState("");
+  const loadReport = () => api.reports().then((reports) => {
+    const first = reports.items?.[0];
+    return first ? api.report(first.report_id) : null;
+  });
   useEffect(() => {
     let active = true;
-    api.reports().then((reports) => {
-      const first = reports.items?.[0];
-      return Promise.all([first ? api.report(first.report_id) : null, api.detailedAnalyses()]);
-    }).then(([value, jobs]) => {
+    Promise.all([loadReport(), api.detailedAnalyses()]).then(([value, jobs]) => {
       if (!active) return;
       setReport(value);
       setDetailed(jobs.items || []);
     }).catch((reason) => { if (active) setError(reason.message); });
     return () => { active = false; };
   }, []);
+  useEffect(() => {
+    if (!["queued", "running"].includes(generation?.status)) return undefined;
+    const timer = window.setTimeout(() => {
+      api.reportGeneration(generation.job_id).then((job) => {
+        setGeneration(job);
+        if (job.status === "complete") loadReport().then(setReport);
+      }).catch((reason) => setError(reason.message));
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [generation]);
+  const generate = () => {
+    setError("");
+    api.generateReport().then(setGeneration).catch((reason) => setError(reason.message));
+  };
   return <div className="reports-page">
     <nav className="report-tabs" aria-label="报告类型">{Object.entries(tabs).map(([key, label]) => (
       <button aria-current={tab === key ? "page" : undefined} className={tab === key ? "active" : ""}
         key={key} onClick={() => setTab(key)} type="button">{label}</button>
     ))}</nav>
     {error ? <div className="error-banner">{error}</div> : null}
-    {tab === "final" ? <FinalReport report={report} /> : <DetailedReports rows={detailed} />}
+    {tab === "final" ? <FinalReport generation={generation} onGenerate={generate}
+      report={report} /> : <DetailedReports rows={detailed} />}
   </div>;
 }

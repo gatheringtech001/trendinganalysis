@@ -44,6 +44,14 @@ export const api = {
   reports: () => request("/api/reports"),
   report: (reportId) => request(`/api/reports/${encodeURIComponent(reportId)}`),
   reportFileUrl: (reportId) => `${apiBase}/api/reports/${encodeURIComponent(reportId)}/file`,
+  generateReport: () => request("/api/reports/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  }),
+  reportGeneration: (jobId) => request(
+    `/api/report-generation/${encodeURIComponent(jobId)}`,
+  ),
   detailedAnalyses: () => request("/api/detailed-analysis"),
   summary: (store = "") => request(`/api/summary?${queryString({ store })}`),
   engagement: (store = "") => request(`/api/engagement?${queryString({ store })}`),

@@ -4,7 +4,10 @@ import time
 import unittest
 from pathlib import Path
 
-from server import AnalysisBusyError, DetailedAnalysisJobs, ResearchStore, build_database
+from server import (
+    AnalysisBusyError, DetailedAnalysisJobs, ResearchStore, VisualReportJobs,
+    build_database,
+)
 from visual_reports import VisualReportCatalog
 
 
@@ -490,6 +493,43 @@ class ResearchStoreTest(unittest.TestCase):
                      "images", "source_records"},
                     set(claim["evidence"]),
                 )
+
+    def test_visual_report_job_generates_new_pdf_asynchronously(self):
+        pdf_dir = Path(self.temp.name) / "generated-report"
+
+        class FakeCatalog:
+            def get(self, report_id):
+                return {
+                    "report_id": report_id, "sample_count": 415,
+                    "source_records": [{"record_id": "record-1"}],
+                }
+
+        def fake_runner(report, output_dir, progress):
+            progress("rendering", 50)
+            output_dir.mkdir(parents=True)
+            (output_dir / "Aloruh纯视觉诊断-图片结论版.pdf").write_bytes(
+                b"%PDF-1.4\n",
+            )
+            (output_dir / "Aloruh纯视觉诊断-图片结论版-source-notes.json").write_text(
+                json.dumps({"pages": 8, "aloruh_images": report["sample_count"]}),
+                encoding="utf-8",
+            )
+            return {"pages": 8, "sample_count": report["sample_count"]}
+
+        jobs = VisualReportJobs(FakeCatalog(), pdf_dir, runner=fake_runner)
+        created = jobs.submit({})
+        deadline = time.time() + 2
+        status = jobs.get(created["job_id"])
+        while status["status"] not in {"complete", "failed"} and time.time() < deadline:
+            time.sleep(0.01)
+            status = jobs.get(created["job_id"])
+
+        self.assertEqual("complete", status["status"])
+        self.assertEqual(100, status["progress"])
+        self.assertEqual(8, status["result"]["pages"])
+        self.assertTrue((pdf_dir / "Aloruh纯视觉诊断-图片结论版.pdf").is_file())
+        with self.assertRaises(ValueError):
+            jobs.submit({"unsupported": True})
 
     def test_visual_report_catalog_lists_persisted_detailed_runs(self):
         detailed_root = Path(self.temp.name) / "detailed"

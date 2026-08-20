@@ -16,11 +16,12 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from data_store import ResearchStore, build_database
 from database_builder import SNAPSHOT
-from visual_reports import VisualReportCatalog
+from report_pdf import build_visual_report
+from visual_reports import REPORT_ID, VisualReportCatalog
 
 
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT.parent / "data"
+DATA_DIR = Path(os.environ.get("FASHION_SCOPE_DATA_DIR", ROOT.parent / "data"))
 DB_PATH = ROOT / "explorer.db"
 DIST_DIR = ROOT / "dist"
 DEFAULT_ANALYSIS_SCRIPT_DIR = ROOT.parents[1] / "2026-08-18" / "scripts"
@@ -36,9 +37,13 @@ REPO_ROOT = ROOT.parents[2]
 REPORT_PDF_DIR = Path(os.environ.get(
     "FASHION_SCOPE_REPORT_PDF_DIR", REPO_ROOT / "output" / "pdf",
 ))
+DETAILED_HISTORY_ROOT = Path(os.environ.get(
+    "FASHION_SCOPE_DETAILED_HISTORY_ROOT",
+    REPO_ROOT / "output" / "visual-analysis-sol-smoke",
+))
 DETAILED_HISTORY_ROOTS = (
     DETAILED_OUTPUT_DIR,
-    REPO_ROOT / "output" / "visual-analysis-sol-smoke",
+    DETAILED_HISTORY_ROOT,
 )
 sys.path.insert(0, str(ANALYSIS_SCRIPT_DIR))
 
@@ -234,6 +239,75 @@ class DetailedAnalysisJobs:
         return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+class VisualReportJobs:
+    def __init__(self, catalog, output_dir, runner=build_visual_report):
+        self.catalog = catalog
+        self.output_dir = Path(output_dir)
+        self.runner = runner
+        self.lock = threading.Lock()
+        self.jobs = {}
+        self.active_job_id = None
+
+    def submit(self, payload):
+        if not isinstance(payload, dict) or payload:
+            raise ValueError("视觉报告生成暂不接受额外参数")
+        with self.lock:
+            if self.active_job_id:
+                raise AnalysisBusyError("已有视觉报告正在生成，请等待完成")
+            job_id = uuid.uuid4().hex
+            job = {
+                "job_id": job_id, "status": "queued", "stage": "queued",
+                "progress": 0, "created_at": self._now(),
+            }
+            self.jobs[job_id] = job
+            self.active_job_id = job_id
+        threading.Thread(target=self._run, args=(job_id,), daemon=True).start()
+        return copy.deepcopy(job)
+
+    def get(self, job_id):
+        with self.lock:
+            job = self.jobs.get(job_id)
+            return copy.deepcopy(job) if job else None
+
+    def list(self):
+        with self.lock:
+            return [copy.deepcopy(job) for job in reversed(self.jobs.values())]
+
+    def _run(self, job_id):
+        self._update(job_id, status="running", stage="aggregating", progress=5)
+        try:
+            report = self.catalog.get(REPORT_ID)
+            if report is None or not report.get("source_records"):
+                raise RuntimeError("没有可用于生成报告的分析记录")
+            result = self.runner(
+                report, self.output_dir,
+                lambda stage, progress: self._update(
+                    job_id, stage=stage, progress=progress,
+                ),
+            )
+            self._update(
+                job_id, status="complete", stage="complete", progress=100,
+                completed_at=self._now(), result=result,
+            )
+        except Exception as error:
+            self._update(
+                job_id, status="failed", stage="failed", progress=100,
+                completed_at=self._now(), error=str(error)[:1000],
+            )
+        finally:
+            with self.lock:
+                if self.active_job_id == job_id:
+                    self.active_job_id = None
+
+    def _update(self, job_id, **changes):
+        with self.lock:
+            self.jobs[job_id].update(changes)
+
+    @staticmethod
+    def _now():
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 class ResearchHandler(SimpleHTTPRequestHandler):
     server_version = "FashionScope/1.0"
 
@@ -256,7 +330,9 @@ class ResearchHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/ask", "/api/detailed-analysis"}:
+        if parsed.path not in {
+            "/api/ask", "/api/detailed-analysis", "/api/reports/generate",
+        }:
             self.send_error(404)
             return
         declared_length = int(self.headers.get("Content-Length", "0"))
@@ -267,6 +343,14 @@ class ResearchHandler(SimpleHTTPRequestHandler):
             payload = json.loads(self.rfile.read(declared_length) or b"{}")
         except json.JSONDecodeError:
             self.send_json({"error": "invalid_json"}, 400)
+            return
+        if parsed.path == "/api/reports/generate":
+            try:
+                self.send_json(self.server.report_jobs.submit(payload), 202)
+            except AnalysisBusyError as error:
+                self.send_json({"error": "report_busy", "message": str(error)}, 409)
+            except (TypeError, ValueError) as error:
+                self.send_json({"error": "invalid_request", "message": str(error)}, 400)
             return
         if parsed.path == "/api/detailed-analysis":
             try:
@@ -285,6 +369,14 @@ class ResearchHandler(SimpleHTTPRequestHandler):
         try:
             if parsed.path == "/api/reports":
                 payload = {"items": self.server.reports.list_reports()}
+            elif parsed.path == "/api/report-generation":
+                payload = {"items": self.server.report_jobs.list()}
+            elif parsed.path.startswith("/api/report-generation/"):
+                job_id = parsed.path.rsplit("/", 1)[-1]
+                payload = self.server.report_jobs.get(job_id)
+                if payload is None:
+                    self.send_json({"error": "not_found"}, 404)
+                    return
             elif parsed.path.startswith("/api/reports/"):
                 parts = [unquote(part) for part in parsed.path.split("/")[3:]]
                 report_id = parts[0] if parts else ""
@@ -398,6 +490,7 @@ def main():
     server.reports = VisualReportCatalog(
         DB_PATH, REPORT_PDF_DIR, DETAILED_HISTORY_ROOTS, analysis_dir=DATA_DIR,
     )
+    server.report_jobs = VisualReportJobs(server.reports, REPORT_PDF_DIR)
     print(f"Fashion Scope: http://{args.host}:{args.port}")
     try:
         server.serve_forever()
