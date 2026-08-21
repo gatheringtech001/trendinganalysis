@@ -34,6 +34,11 @@ def _write_json(path: Path, value: object) -> None:
     os.replace(building, path)
 
 
+def _shared_image_cache(args, output: Path) -> Path:
+    configured = getattr(args, "image_cache", None)
+    return Path(configured) if configured else output.parent / "_image_cache"
+
+
 def _image_id(row: dict) -> str:
     key = f"{row['store_id']}:{row['product_id']}:{row['position']}"
     return hashlib.sha256(key.encode("utf-8")).hexdigest()[:20]
@@ -308,6 +313,7 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
         args.db, args.target_store, args.categories,
     )
     output = Path(args.output)
+    image_cache = _shared_image_cache(args, output)
     progress("downloading_hd_images", 5)
     items, failures = [], []
     for index, row in enumerate(rows, 1):
@@ -316,6 +322,7 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
                 store_id=row["store_id"], product_id=row["product_id"],
                 position=row["position"], source_url=row["source_url"],
                 output_dir=output / "images", timeout=args.download_timeout,
+                cache_dir=image_cache,
             )
             items.append({**row, "download": download})
         except Exception as error:
@@ -343,6 +350,8 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
         "status": "analyzing", "scope": scope, "model": args.deployment,
         "image_detail": "high", "selected_images": len(rows),
         "downloaded_images": len(items), "download_failures": failures,
+        "cache_hits": sum(item["download"].cache_hit for item in items),
+        "network_downloads": sum(not item["download"].cache_hit for item in items),
         "competitor_evidence": competitor_evidence,
         "images": [_public_image(item) for item in items],
     }
@@ -443,7 +452,8 @@ def default_args(**overrides):
     values = {
         "db": None, "output": None, "target_store": "aloruh_shein",
         "categories": ["TOPS", "SKIRTS"],
-        "download_timeout": 30, "deployment": "gpt-5.6-sol",
+        "download_timeout": 30, "image_cache": None,
+        "deployment": "gpt-5.6-sol",
         "endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT"),
         "api_key": os.environ.get("AZURE_OPENAI_KEY"),
     }
