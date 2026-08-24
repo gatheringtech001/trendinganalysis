@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import unittest
@@ -72,11 +73,36 @@ class ReferenceReportPdfTest(unittest.TestCase):
             for index, claim in enumerate(claims):
                 store = competitor_stores[index] if section_id == "competitive_gap" else "aloruh_shein"
                 for image_id in claim["evidence"]["support_image_ids"] + claim["evidence"]["counterexample_image_ids"]:
+                    category = "SKIRTS" if section_id == "product_display" and index == 1 else "TOPS"
                     images.append({
                         "image_id": image_id, "store_id": store,
-                        "category": "TOPS", "resolved_url": f"https://example.com/{image_id}.jpg",
+                        "category": category,
+                        "resolved_url": f"https://example.com/{image_id}.jpg",
+                        "selection_reasons": [
+                            {"tag": "CASUAL"},
+                            {"tag": "DATE_NIGHT"},
+                            {"tag": "BEACH"},
+                        ],
                     })
-                    observations.append({"image_id": image_id})
+                    is_support = image_id in claim["evidence"]["support_image_ids"]
+                    if section_id == "product_display" and index == 0:
+                        framing, pose, garment = "上半身近景", "正面站立", "上衣正面局部细节"
+                    elif section_id == "product_display" and index == 1:
+                        framing, pose, garment = "全身全长", "正面站立", "裙装腰头至下摆完整"
+                    elif section_id == "product_display" and index == 2 and not is_support:
+                        framing, pose, garment = "背面中景", "人物背对镜头", "上衣背面结构清楚"
+                    else:
+                        framing, pose, garment = "正面中近景", "人物正面站立", "正面局部结构清楚"
+                    observations.append({
+                        "image_id": image_id,
+                        "observable": {
+                            "scene": "休闲街头、浪漫约会、海边度假、夜间派对",
+                            "framing": f"头部面部清楚；{framing}",
+                            "pose_action": pose,
+                            "garment_display": garment,
+                            "first_image_type": "模特商品图",
+                        },
+                    })
         return {
             "scope": {
                 "target_images": 386,
@@ -130,6 +156,61 @@ class ReferenceReportPdfTest(unittest.TestCase):
         self.assertIn("Breakdown", text)
         self.assertIn("VISUAL\nUPGRADE\nDIRECTION", text)
         self.assertNotIn("逐图观察索引", text)
+
+    def test_product_pages_record_semantically_valid_image_placements(self):
+        with patch("report_pdf._fetch_image", return_value=self.image):
+            report_pdf.build_visual_report(self.report(), self.root)
+
+        notes = json.loads((self.root / SOURCE_NOTES_NAME).read_text(encoding="utf-8"))
+        placements = notes["layout_contract"]["page_placements"]
+        page_nine = [row for row in placements if row["page"] == 9]
+        page_ten = [row for row in placements if row["page"] == 10]
+        self.assertTrue(page_nine)
+        self.assertTrue(page_ten)
+        self.assertEqual({"TOPS"}, {row["category"] for row in page_nine})
+        self.assertEqual({"SKIRTS"}, {row["category"] for row in page_ten})
+
+        matrix = {
+            row["slot"]: row
+            for row in placements
+            if row["page"] == 14
+        }
+        self.assertEqual("TOPS", matrix["TOPS 近景"]["category"])
+        self.assertEqual("SKIRTS", matrix["SKIRTS 全长"]["category"])
+        self.assertIn("正面", matrix["正面"]["semantic_text"])
+        self.assertRegex(matrix["背面"]["semantic_text"], "背面|背对")
+        self.assertRegex(matrix["局部"]["semantic_text"], "局部|近景|特写")
+
+    def test_fetch_image_reuses_report_analysis_shared_cache(self):
+        source_url = "https://example.com/thumb.jpg"
+        resolved_url = "https://example.com/full.jpg"
+        cache_key = hashlib.sha256(f"aloruh_shein\0{source_url}".encode()).hexdigest()
+        shared = self.root / "_image_cache"
+        shared.mkdir()
+        cached = shared / f"{cache_key}.jpg"
+        cached.write_bytes(self.image.read_bytes())
+        digest = hashlib.sha256(cached.read_bytes()).hexdigest()
+        (shared / f"{cache_key}.json").write_text(json.dumps({
+            "file": cached.name,
+            "resolved_url": resolved_url,
+            "width": 720,
+            "height": 960,
+            "bytes": cached.stat().st_size,
+            "sha256": digest,
+            "mime_type": "image/jpeg",
+        }), encoding="utf-8")
+        row = {
+            "store_id": "aloruh_shein",
+            "source_url": source_url,
+            "resolved_url": resolved_url,
+            "sha256": digest,
+        }
+
+        with patch("urllib.request.urlopen") as urlopen:
+            result = report_pdf._fetch_image(row, self.root / "pdf-cache", shared)
+
+        self.assertEqual(cached, result)
+        urlopen.assert_not_called()
 
 
 if __name__ == "__main__":

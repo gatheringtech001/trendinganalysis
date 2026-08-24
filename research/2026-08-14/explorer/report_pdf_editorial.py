@@ -28,11 +28,35 @@ class EditorialDeck(DeckBase):
 
     def _draw_mosaic(self, spec):
         self._header(spec)
-        self._grid(self._take(spec, 12), 50, 55, 1820, 840, 6, 8)
+        requirements = {"allow_fewer": True}
+        if spec.get("store"):
+            requirements["scope"] = "store"
+        if spec["page"] == 6:
+            requirements["scope"] = "section"
+        occasion_tags = {
+            32: ["CASUAL"],
+            33: ["DATE_NIGHT", "GOING_OUT", "PARTY"],
+            34: ["BEACH", "SWIM_COVERUP"],
+        }
+        if spec["page"] in occasion_tags:
+            requirements.update({"scope": "store", "tags": occasion_tags[spec["page"]]})
+        ids = self._take(spec, 12, requirements)
+        self._grid(ids, 50, 55, 1820, 840, min(6, len(ids)), 8)
 
     def _draw_dense_mosaic(self, spec):
         self._header(spec)
-        self._grid(self._take(spec, 20), 50, 45, 1820, 860, 10, 6)
+        requirements = {"allow_fewer": True}
+        if spec.get("store"):
+            requirements["scope"] = "store"
+        if spec["page"] in {22, 42}:
+            requirements["scope"] = "section"
+        if spec["page"] == 31:
+            requirements.update({
+                "scope": "store",
+                "include_any": ["头部", "面部", "脸"],
+            })
+        ids = self._take(spec, 20, requirements)
+        self._grid(ids, 50, 45, 1820, 860, min(10, len(ids)), 6)
 
     def _draw_scope(self, spec):
         scope = self.report["scope"]
@@ -46,7 +70,9 @@ class EditorialDeck(DeckBase):
             self._text(label, 285, y - 2, 16, 360, SAND)
 
     def _draw_hero_collage(self, spec):
-        self._grid(self._take(spec, 10), 0, 0, 1920, 1080, 5, 0, .08)
+        category = "TOPS" if spec["page"] == 9 else "SKIRTS"
+        ids = self._take(spec, 10, {"category": category})
+        self._grid(ids, 0, 0, 1920, 1080, 5, 0, .08)
         self.canvas.setFillColorRGB(0, 0, 0, alpha=.65)
         self.canvas.rect(0, 0, 690, 1080, fill=1, stroke=0)
         self._text(spec["title"], 52, 920, 30, 570, WHITE, True, max_lines=4)
@@ -84,10 +110,17 @@ class EditorialDeck(DeckBase):
 
     def _draw_matrix(self, spec):
         self._header(spec)
-        labels = ["TOPS 近景", "SKIRTS 全长", "正面", "背面", "局部"]
-        for index, (image_id, label) in enumerate(zip(self._take(spec, 5), labels)):
+        slots = [
+            ({**spec, "claim": 0}, {"category": "TOPS", "include_any": ["近景", "近距离", "躯干", "上半身"]}, "TOPS 近景"),
+            ({**spec, "claim": 1}, {"category": "SKIRTS", "include_groups": [["全长", "全身", "腰头"], ["下摆", "完整"]]}, "SKIRTS 全长"),
+            ({**spec, "claim": 2}, {"evidence": "support", "include_any": ["正面"]}, "正面"),
+            ({**spec, "claim": 2}, {"evidence": "counter", "include_any": ["背面", "背对", "背身"]}, "背面"),
+            ({**spec, "claim": 2}, {"evidence": "support", "include_any": ["局部", "近景", "特写", "近距离"]}, "局部"),
+        ]
+        for index, (source, requirements, label) in enumerate(slots):
+            image_id = self._take(source, 1, requirements)[0]
             x = 50 + index * 364
-            self._photo(image_id, x, 360, 330, 500)
+            self._photo(image_id, x, 360, 330, 500, slot=label)
             self._text(label, x, 315, 18, 330, INK, True)
             self._text("构图 / 动作 / 卖点 / 场景", x, 265, 14, 330, STONE)
         self._text(self._body(spec), 50, 145, 21, 1780, INK, max_lines=3)
@@ -95,9 +128,11 @@ class EditorialDeck(DeckBase):
     def _draw_logic(self, spec):
         self._header(spec)
         labels = ["场景入口分散", "模板重复", "信息层级不统一"]
-        for index, (image_id, label) in enumerate(zip(self._take(spec, 3), labels)):
+        for index, label in enumerate(labels):
+            source = {**spec, "claim": index}
+            image_id = self._take(source, 1, {"evidence": "support"})[0]
             x = 75 + index * 610
-            self._photo(image_id, x, 210, 535, 650)
+            self._photo(image_id, x, 210, 535, 650, slot=label)
             self._text(label, x, 165, 18, 530, INK, True)
         self._text(self._body(spec), 75, 105, 16, 1750, STONE, max_lines=2)
 
@@ -116,9 +151,19 @@ class EditorialDeck(DeckBase):
 
     def _draw_four_compare(self, spec):
         self._header(spec)
-        for index, image_id in enumerate(self._take(spec, 4)):
-            self._photo(image_id, index * 480, 0, 480, 905, .22 if index % 2 == 0 else 0)
-            self._text("现状" if index % 2 == 0 else "调整后", index * 480 + 35, 55, 17, 170, WHITE, True)
+        if spec["page"] == 49:
+            roles = ["counter", "support", "counter", "support"]
+            ids = [self._take(spec, 1, {"evidence": role})[0] for role in roles]
+        else:
+            ids = self._take(spec, 4)
+        for index, image_id in enumerate(ids):
+            label = "现状" if index % 2 == 0 else "规则参考"
+            self._photo(
+                image_id, index * 480, 0, 480, 905,
+                .22 if index % 2 == 0 else 0,
+                slot=f"{label} {index // 2 + 1}",
+            )
+            self._text(label, index * 480 + 35, 55, 17, 170, WHITE, True)
 
     def _draw_brand_codes(self, spec):
         self._header(spec)
@@ -139,7 +184,7 @@ class EditorialDeck(DeckBase):
         claims = self._section(spec)["claims"]
         for index, (image_id, label) in enumerate(zip(ids, labels)):
             x = 50 + index * 455
-            self._photo(image_id, x, 405, 420, 480, .2)
+            self._photo(image_id, x, 405, 420, 480, .2, slot=label)
             self._text(label, x, 355, 17, 420, INK, True)
             body = self.sections["brand_positioning"]["summary"] if index == 0 else claims[index - 1]["conclusion"]
             self._text(body, x, 300, 14, 405, STONE, max_lines=7)
@@ -164,10 +209,17 @@ class EditorialDeck(DeckBase):
 
     def _draw_four_series(self, spec):
         self._header(spec)
-        labels = ["CASUAL OUTING", "ROMANTIC DATE", "VACATION SUN-KISSED", "PARTY NIGHT OUT"]
-        for index, (image_id, label) in enumerate(zip(self._take(spec, 4), labels)):
+        slots = [
+            ("CASUAL OUTING", ["休闲", "街头", "日常", "通勤"]),
+            ("ROMANTIC DATE", ["约会", "浪漫"]),
+            ("VACATION SUN-KISSED", ["度假", "海边", "沙滩", "海景"]),
+            ("PARTY NIGHT OUT", ["派对", "夜间", "晚宴", "酒吧"]),
+        ]
+        for index, (label, keywords) in enumerate(slots):
+            requirements = {"scope": "store", "include_any": keywords}
+            image_id = self._take(spec, 1, requirements)[0]
             x = index * 480
-            self._photo(image_id, x, 0, 480, 900, .12)
+            self._photo(image_id, x, 0, 480, 900, .12, slot=label)
             self._text(label, x + 24, 120, 17, 420, WHITE, True, max_lines=2)
 
     def _draw_flow(self, spec):
@@ -181,9 +233,12 @@ class EditorialDeck(DeckBase):
 
     def _draw_grid_compare(self, spec):
         self._text(spec["title"], 30, 1010, 22, 180, INK, True)
-        self._grid(self._take(spec, 8), 500, 30, 1360, 1000, 4, 10)
+        evidence = "counter" if spec["page"] == 50 else "support"
+        requirements = {"scope": "section", "evidence": evidence}
+        self._grid(self._take(spec, 8, requirements), 500, 30, 1360, 1000, 4, 10)
 
     def _draw_plan(self, spec):
         self._text(spec["title"], 110, 800, 30, 240, INK, True)
         self._text(spec["subtitle"], 110, 450, 22, 260, STONE, True, max_lines=3)
-        self._grid(self._take(spec, 8), 390, 35, 1460, 1000, 4, 10)
+        requirements = {"scope": "section", "evidence": "support"}
+        self._grid(self._take(spec, 8, requirements), 390, 35, 1460, 1000, 4, 10)

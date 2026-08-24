@@ -32,7 +32,7 @@ REFERENCE_SEQUENCE = [
     {"page": 31, "kind": "dense_mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "Model Faces", "subtitle": "模特面孔"},
     {"page": 32, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "DAILY 视觉语言", "subtitle": "Model States · DAILY"},
     {"page": 33, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "PARTY 视觉语言", "subtitle": "Model States · PARTY"},
-    {"page": 34, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "SWIM 视觉语言", "subtitle": "Model States · SWIM"},
+    {"page": 34, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "BEACH / VACATION 视觉语言", "subtitle": "Model States · BEACH"},
     {"page": 35, "kind": "brand_feature", "section": "competitive_gap", "claim": 1, "store": "motel", "title": "MOTEL ROCKS", "subtitle": "高度标准化的中性棚拍体系"},
     {"page": 36, "kind": "mosaic", "section": "competitive_gap", "claim": 1, "store": "motel", "title": "视觉基调：标准化商品摄影", "subtitle": "Visual tone"},
     {"page": 37, "kind": "brand_feature", "section": "competitive_gap", "claim": 2, "store": "prettylittlething", "title": "PRETTYLITTLETHING", "subtitle": "规模化一致性"},
@@ -49,7 +49,7 @@ REFERENCE_SEQUENCE = [
     {"page": 48, "kind": "three_compare", "section": "visual_upgrade", "claim": 0, "title": "网感首图优化对比", "subtitle": "现状 -> 标准商品图 -> 氛围图"},
     {"page": 49, "kind": "four_compare", "section": "visual_upgrade", "claim": 3, "title": "搭配调整对比", "subtitle": "固定规则，不固定遮挡动作"},
     {"page": 50, "kind": "grid_compare", "section": "visual_upgrade", "claim": 0, "title": "BEFORE"},
-    {"page": 51, "kind": "grid_compare", "section": "visual_upgrade", "claim": 1, "title": "AFTER"},
+    {"page": 51, "kind": "grid_compare", "section": "visual_upgrade", "claim": 1, "title": "REFERENCE"},
     {"page": 52, "kind": "plan", "section": "visual_upgrade", "claim": 2, "title": "PLAN A", "subtitle": "统一商品信息层"},
     {"page": 53, "kind": "plan", "section": "visual_upgrade", "claim": 3, "title": "PLAN B", "subtitle": "统一品牌氛围层"},
 ]

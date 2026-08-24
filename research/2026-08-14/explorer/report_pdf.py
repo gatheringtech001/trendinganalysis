@@ -21,7 +21,39 @@ REFERENCE_SHA256 = "33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfce
 LAYOUT_VERSION = "reference-53-page-v1"
 
 
-def _fetch_image(url, cache_dir):
+def _shared_cached_image(image, shared_cache_dir):
+    source_url = image.get("source_url")
+    store_id = image.get("store_id")
+    if not source_url or not store_id or not shared_cache_dir:
+        return None
+    cache_key = hashlib.sha256(f"{store_id}\0{source_url}".encode()).hexdigest()
+    metadata_path = Path(shared_cache_dir) / f"{cache_key}.json"
+    if not metadata_path.is_file():
+        return None
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        file_name = metadata["file"]
+        if Path(file_name).name != file_name:
+            return None
+        path = metadata_path.parent / file_name
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        if digest != metadata["sha256"] or digest != image.get("sha256"):
+            return None
+        if len(data) != metadata["bytes"] or len(data) > 15_000_000:
+            return None
+        with Image.open(io.BytesIO(data)) as cached:
+            cached.verify()
+        return path
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _fetch_image(image, cache_dir, shared_cache_dir=None):
+    shared = _shared_cached_image(image, shared_cache_dir)
+    if shared is not None:
+        return shared
+    url = image["resolved_url"]
     parsed = urlparse(str(url))
     if parsed.scheme not in {"http", "https"}:
         raise ValueError("证据图片URL必须使用HTTP或HTTPS")
@@ -44,32 +76,25 @@ def _approval_summary(report):
     return f"报告专项分析 · {review['approved_sections']}/{review['total_sections']} 章节通过"
 
 
-def _evidence_ids(report):
-    ids = []
-    for section in report["sections"]:
-        for claim in section["claims"]:
-            evidence = claim["evidence"]
-            ids.extend(evidence["support_image_ids"])
-            ids.extend(evidence["counterexample_image_ids"])
-    return ids
-
-
 def _render(report, pdf_path, cache_dir, progress):
     images = {row["image_id"]: row for row in report["images"]}
+    analysis_root = Path(os.environ.get(
+        "FASHION_SCOPE_REPORT_ANALYSIS_OUTPUT_DIR",
+        Path(__file__).with_name("runtime") / "report_analysis_jobs",
+    ))
+    shared_cache_dir = analysis_root / "_image_cache"
     deck = EditorialDeck(
         pdf_path, images,
-        lambda url: _fetch_image(url, cache_dir),
+        lambda image: _fetch_image(image, cache_dir, shared_cache_dir),
     )
     progress("rendering_cover", 10)
     deck.render(report)
     progress("rendering_sections", 85)
     deck.save()
-    expected = set(_evidence_ids(report))
-    displayed = set(deck.displayed_evidence_ids)
-    if not expected.issubset(displayed):
-        missing = sorted(expected - displayed)
-        raise RuntimeError(f"PDF未展示全部支持与反例图片: {missing[:10]}")
-    return deck, sorted(expected)
+    displayed = sorted(set(deck.displayed_evidence_ids))
+    if not displayed:
+        raise RuntimeError("PDF未展示任何结论证据图")
+    return deck, displayed
 
 
 def _final_payload(report, generated, pages):
@@ -89,7 +114,7 @@ def _final_payload(report, generated, pages):
     }
 
 
-def _layout_contract(displayed_ids):
+def _layout_contract(displayed_ids, page_placements):
     return {
         "version": LAYOUT_VERSION,
         "reference_sha256": REFERENCE_SHA256,
@@ -106,6 +131,7 @@ def _layout_contract(displayed_ids):
         ],
         "section_page_order": [list(item) for item in SECTION_PAGE_ORDER],
         "displayed_evidence_image_ids": displayed_ids,
+        "page_placements": page_placements,
         "raw_observation_index": False,
     }
 
@@ -124,7 +150,7 @@ def build_visual_report(report, output_dir, progress=lambda _stage, _value: None
         notes = {
             **final,
             "image_failures": [],
-            "layout_contract": _layout_contract(displayed_ids),
+            "layout_contract": _layout_contract(displayed_ids, deck.page_placements),
             "usage": {
                 "total_tokens": 0,
                 "estimated_cost_usd": 0,
