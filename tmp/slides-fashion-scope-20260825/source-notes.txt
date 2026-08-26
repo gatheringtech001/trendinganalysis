@@ -1,0 +1,51 @@
+Fashion Scope slides source inventory
+
+Repository evidence
+- research/2026-08-14/scripts/collect_catalogs.py
+- research/2026-08-18/scripts/prepare_aloruh_shein_for_explorer.py
+- research/2026-08-18/scripts/import_aloruh_customer.py
+- research/2026-08-14/explorer/database_builder.py
+- research/2026-08-14/explorer/data_store.py
+- research/2026-08-14/explorer/server.py
+- research/2026-08-14/explorer/src/Reports.jsx
+- research/2026-08-18/scripts/report_analysis_runner.py
+- research/2026-08-18/scripts/report_analysis_model.py
+- research/2026-08-18/scripts/azure_openai_fashion_analyzer.py
+- research/2026-08-18/scripts/fashion_image_analysis.py
+- research/2026-08-18/scripts/detailed_visual_analysis.py
+- research/2026-08-18/scripts/high_resolution_images.py
+- research/2026-08-18/data/aloruh_shein_browser_export.json
+- research/2026-08-18/data/aloruh_shein_browser_export.recollect.partial.json
+- research/2026-08-14/explorer/report_pdf.py
+- research/2026-08-14/explorer/report_pdf_pages.py
+- research/2026-08-14/explorer/deploy_kevindigital.sh
+
+Production evidence
+- https://regardsjob.eastasia.cloudapp.azure.com/fashion-scope/
+- Screenshots captured 2026-08-25 through Playwright; console errors=0, warnings=0.
+- User-confirmed Aloruh SHEIN method, 2026-08-26: Browser Use with the user's personal login; the user manually completes CAPTCHA or verification steps; browser automation then collects brand catalog and required product-detail evidence.
+- Experience 1 paid analysis captured on production, 2026-08-26: one manual run for TOPS + VACATION using two selected Princess Polly images; job 38813f99a9e948cfa16f44258e72ff71 completed in 81.3 seconds with 2/2 images, 8,343 total tokens, and estimated cost $0.1897.
+- Screenshots: assets/experience1-step6-analysis-running.png and assets/experience1-step7-analysis-result.png.
+
+Report evidence
+- tmp/pdfs/production-semantic-22a1362.pdf
+- tmp/pdfs/semantic-pages-22a1362/page-*.jpg
+
+Current verified values used in the deck
+- Website overview: 60,260 SKUs; 288,831 image index rows; 25,916 analyzed images.
+- Live explorer.db store inventory on 2026-08-26:
+  - Aloruh SHEIN: 2,848 products; 4,352 distinct in-store source URLs; 343 analyzed images.
+  - Aloruh local: 10,487 products; 10,771 distinct in-store source URLs; 10,466 analyzed images.
+  - Princess Polly: 17,008 products; 119,205 distinct in-store source URLs; 5,613 analyzed images.
+  - Motel Rocks: 4,422 products; 26,676 distinct in-store source URLs; 2,141 analyzed images.
+  - PrettyLittleThing: 25,495 products; 127,827 distinct in-store source URLs; 7,353 analyzed images.
+  - Totals: 60,260 products; 288,831 in-store image-index rows; 288,513 globally distinct source URLs; 25,916 analyzed images; 606,007 analysis tags.
+  - Image-index rows are URL records, not downloaded image files.
+- Dimension example: TOPS + VACATION => 3,179 matched images on 2026-08-25 production UI.
+- Standardized image schema: 15 dimensions from fashion-image-v2 — product category, silhouette/fit, design elements, occasion, composition, view/action, selling points, scene, material/texture, color/pattern, visual language, styling, lighting, model state, and graphic overlay.
+- Completed Aloruh SHEIN browser export: 26/26 catalog pages, 3,006 raw cards, 150/150 detailed products; export metadata states that cookies, tokens, headers, credentials, and risk parameters are excluded.
+- Terra classifier: gpt-5.6-terra through /openai/v1/responses, low-detail image inputs, strict 15-dimension JSON schema, default batch size 8 and workers 8 in analyze_explorer_images.py.
+- Sol detailed analysis: gpt-5.6-sol through /openai/v1/responses, high-detail validated HD files, visible-cue evidence requirements, strict image/store/section schemas.
+- Shared HD cache boundary: report_analysis_runner.py supplies a shared _image_cache to high_resolution_images.py; analyze_dimension_selection.py currently does not supply that cache directory, so the deck describes shared reuse only for the overall report path.
+- Report scope: 386 target images; 15,107 competitor population; 106 competitor HD evidence; 492 analyzed images.
+- Final report: 5 sections; 53 pages; PDF layout uses 0 model tokens.

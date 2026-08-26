@@ -1,0 +1,51 @@
+# Local caches and dependencies
+.playwright-cli/
+**/__pycache__/
+**/node_modules/
+*.pyc
+*.db
+.env
+.env.*
+!.env.example
+
+# Runtime and research outputs
+generated/
+recreated-dashboard/
+screenshots/
+research/**/analysis/
+research/**/backups/
+research/**/data/
+research/**/deliverables/
+research/**/dist/
+research/**/qa/
+research/**/raw/
+research/**/reports/
+research/**/sample_images/
+research/**/staging/
+research/**/workbook/
+output/pdf/image_cache/
+output/playwright/
+output/visual-analysis-*/
+
+# Scratch presentation files: keep only the reproducible source and assets
+tmp/*
+!tmp/slides-fashion-scope-20260825/
+tmp/slides-fashion-scope-20260825/*
+!tmp/slides-fashion-scope-20260825/assets/
+!tmp/slides-fashion-scope-20260825/assets/**
+!tmp/slides-fashion-scope-20260825/build_deck.mjs
+!tmp/slides-fashion-scope-20260825/source-notes.txt
+
+# Keep only the current presentation deliverable
+output/*.pptx
+output/*.inspect.ndjson
+output/*/
+!output/Fashion-Scope-技术架构与产品体验-20260826-v6.pptx
+
+# Root-level imports and archives
+/*.jsonl
+/*.json
+/*.zip
+/*.pdf
+/*.png
+/*.svg
