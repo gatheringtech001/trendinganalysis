@@ -6,8 +6,8 @@ import { Presentation, PresentationFile } from "@oai/artifact-tool";
 const TMP = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(TMP, "..", "..");
 const ASSETS = path.join(TMP, "assets");
-const RENDERS = path.join(TMP, "renders-v7");
-const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260826-v7.pptx");
+const RENDERS = path.join(TMP, "renders-v8");
+const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260826-v8.pptx");
 
 const W = 1280;
 const H = 720;
@@ -170,6 +170,17 @@ function addPromptBlock(slide, position, title, body, accent = false) {
     left: position.left + 20, top: position.top + 58, width: position.width - 40,
     height: position.height - 76,
   }, { fontSize: 16, color: accent ? INK : MUTED });
+}
+
+function addCodeBlock(slide, position, title, lines, accent = false) {
+  addBox(slide, position, accent ? LIGHT_BLUE : PANEL, "none", 8, `code-${title}`);
+  addText(slide, title, {
+    left: position.left + 20, top: position.top + 18, width: position.width - 40, height: 28,
+  }, { fontSize: 18, bold: true, color: accent ? BLUE : INK }, `code-title-${title}`);
+  addText(slide, lines.join("\n"), {
+    left: position.left + 20, top: position.top + 58, width: position.width - 40,
+    height: position.height - 76,
+  }, { fontSize: 16, typeface: FONT_LATIN, color: accent ? INK : MUTED }, `code-body-${title}`);
 }
 
 async function addDemoSlide(options) {
@@ -631,42 +642,43 @@ let pageNumber = 2;
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "真实实现：一条Prompt一次返回15个维度，不是15条Prompt", "Layer 2 · Terra actual prompt", pageNumber++,
-    "本页直接按代码呈现：一条英文规则＋15个受控标签字典＋严格JSON输出。");
-  flowArrow(s, { position: { left: 298, top: 252, width: 42, height: 48 } });
-  flowArrow(s, { position: { left: 612, top: 252, width: 42, height: 48 } });
-  flowArrow(s, { position: { left: 926, top: 252, width: 42, height: 48 } });
-  flowNode(s, { position: { left: 48, top: 186, width: 250, height: 166 }, step: "01", title: "每批1–8张图", detail: "图片URL＋标题\n已有品类＋图片位置", accent: true });
-  flowNode(s, { position: { left: 340, top: 186, width: 272, height: 166 }, step: "02", title: "一条统一Prompt", detail: "只看可见证据\n看不清返回UNKNOWN\n主售商品优先" });
-  flowNode(s, { position: { left: 654, top: 186, width: 272, height: 166 }, step: "03", title: "Terra低清识别", detail: "同一次调用判断\n全部15个维度" });
-  flowNode(s, { position: { left: 968, top: 186, width: 240, height: 166 }, step: "04", title: "严格JSON入库", detail: "每维标签＋置信度\n漏维度直接失败", dark: true });
+  addHeader(s, "第11页：维度相关部分是标签字典，不是15条判断Prompt", "Layer 2 · Terra actual prompt", pageNumber++,
+    "代码里只有一条统一判断规则；每个维度后面列出允许返回的受控代码。以下为真实维度行节选。");
+  flowArrow(s, { position: { left: 300, top: 214, width: 38, height: 42 } });
+  flowArrow(s, { position: { left: 612, top: 214, width: 38, height: 42 } });
+  flowArrow(s, { position: { left: 924, top: 214, width: 38, height: 42 } });
+  flowNode(s, { position: { left: 48, top: 174, width: 252, height: 122 }, step: "01", title: "每批图片＋上下文", detail: "URL · 标题 · 已有品类 · 位置", accent: true });
+  flowNode(s, { position: { left: 338, top: 174, width: 274, height: 122 }, step: "02", title: "统一可见证据规则", detail: "看不清=UNKNOWN · 主售商品优先" });
+  flowNode(s, { position: { left: 650, top: 174, width: 274, height: 122 }, step: "03", title: "15个受控字段", detail: "同一次调用全部判断，不拆15次" });
+  flowNode(s, { position: { left: 962, top: 174, width: 246, height: 122 }, step: "04", title: "严格JSON返回", detail: "每维标签＋置信度 · 漏项失败", dark: true });
 
-  addBox(s, { left: 48, top: 382, width: 560, height: 218 }, PANEL, "none", 8, "actual-prompt");
-  addText(s, "代码中的真实Prompt节选", { left: 70, top: 402, width: 260, height: 26 },
-    { fontSize: 18, bold: true }, "actual-prompt-title");
-  addText(s, [
-    "Analyze every numbered fashion image using exactly the controlled codes below.",
+  addCodeBlock(s, { left: 48, top: 326, width: 430, height: 298 }, "统一规则节选", [
     "Use visible evidence and the supplied title/category only.",
-    "Select UNKNOWN when a dimension is not observable.",
+    "Select UNKNOWN when a dimension is not observable,",
+    "and never combine UNKNOWN with another code.",
     "product_category must have exactly one value.",
-    "Other dimensions may have up to five values. Return every image once.",
-  ].join("\n"), { left: 70, top: 442, width: 516, height: 138 },
-  { fontSize: 16, typeface: FONT_LATIN, color: MUTED }, "actual-prompt-body");
-
-  addBox(s, { left: 640, top: 382, width: 568, height: 218 }, LIGHT_BLUE, "none", 8, "dimension-schema");
-  addText(s, "15个输出字段（不是15个Prompt）", { left: 662, top: 402, width: 350, height: 26 },
-    { fontSize: 18, bold: true, color: BLUE }, "dimension-schema-title");
-  addText(s, [
-    "商品：品类 · 廓形版型 · 设计元素 · 材质纹理 · 色彩图案",
-    "拍摄：画面构图 · 视角动作 · 卖点部位 · 拍摄场景 · 光线 · 模特状态",
-    "表达：穿着场合 · 视觉语言 · 搭配方式 · 图文叠加",
-  ].join("\n\n"), { left: 662, top: 446, width: 520, height: 130 },
-  { fontSize: 17, color: INK }, "dimension-schema-body");
-  addBox(s, { left: 48, top: 620, width: 1160, height: 34 }, BLACK);
-  addText(s, "真实调用关系：一条Prompt × 一批图片 → 每张图片同时返回15个字段；三组只为演示阅读，不是三次调用。",
-    { left: 72, top: 627, width: 1112, height: 20 }, { fontSize: 16, color: WHITE, alignment: "center" });
+    "Other dimensions may have up to five values.",
+    "Focus on the primary item sold; accessories belong",
+    "in styling unless they are the primary product.",
+  ]);
+  addCodeBlock(s, { left: 504, top: 326, width: 704, height: 298 }, "5个真实维度行节选（受控标签，不是独立指令）", [
+    "product_category: DRESSES, TOPS, SKIRTS, TROUSERS, ... , UNKNOWN",
+    "occasion: CASUAL, GOING_OUT, PARTY, DATE_NIGHT, VACATION, ... , UNKNOWN",
+    "composition: FULL_BODY, THREE_QUARTER, HALF_BODY, CLOSE_UP, ... , UNKNOWN",
+    "view_action: FRONT_VIEW, SIDE_VIEW, BACK_VIEW, TURNING_BACK, WALKING, ...",
+    "scene: STUDIO_NEUTRAL, HOME, MIRROR, BEDROOM, GARDEN, STREET, ... , UNKNOWN",
+    "",
+    "代码没有额外的“occasion判断句”或“scene判断句”；维度语义由字段名、",
+    "标签集合、统一可见证据规则与严格输出Schema共同限定。",
+  ], true);
+  addBox(s, { left: 48, top: 638, width: 1160, height: 26 }, BLACK);
+  addText(s, "完整通用规则＋15个标签字典逐字放在附录A1–A4；Sol主流程与修订Prompt见附录A5–A8。",
+    { left: 72, top: 642, width: 1112, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
-  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`]);
+  addNotes(s, [
+    `${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`,
+    `${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`,
+  ]);
 }
 
 // Sol has different real call patterns for the two experiences.
@@ -710,41 +722,32 @@ let pageNumber = 2;
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "体验1流程①：从15维标签筛到真正送给Sol的图片", "Layer 3A · selection flow", pageNumber++,
-    "Terra标签是预先计算的筛选底座；用户点击付费分析后，Sol只处理最终确认的图片范围。");
-  const topNodes = [
-    ["01", "预先完成15维打标", "Terra批量识别\n标签写入SQLite"],
-    ["02", "用户选择维度＋标签", "例如：商品类别=上衣\n穿着场合=度假"],
-    ["03", "后端执行AND匹配", "每一维都必须命中\n标签值先做合法性校验"],
-    ["04", "按店铺展示候选图", "返回总命中数\n保留商品与图片位置"],
-  ];
-  const bottomNodes = [
-    ["05", "确定付费分析范围", "手动最多24张\n或每店随机1–8张"],
-    ["06", "服务器再次校验", "图片必须属于所选店铺\n且仍满足筛选条件"],
-    ["07", "下载并校验高清图", "像素与边长达标\n失败图片明确记录"],
-  ];
-  for (let i = 0; i < 3; i += 1) {
-    flowArrow(s, { position: { left: 298 + i * 294, top: 224, width: 44, height: 48 } });
-  }
-  flowArrow(s, { text: "↓", position: { left: 1024, top: 336, width: 48, height: 48 } });
-  flowArrow(s, { text: "←", position: { left: 884, top: 454, width: 44, height: 48 } });
-  flowArrow(s, { text: "←", position: { left: 590, top: 454, width: 44, height: 48 } });
-  topNodes.forEach((node, i) => {
-    flowNode(s, {
-      position: { left: 48 + i * 294, top: 176, width: 250, height: 150 },
-      step: node[0], title: node[1], detail: node[2], accent: i === 0,
-    });
-  });
-  bottomNodes.forEach((node, i) => {
-    flowNode(s, {
-      position: { left: 930 - i * 294, top: 398, width: 250, height: 150 },
-      step: node[0], title: node[1], detail: node[2], accent: i === 0,
-    });
-  });
-  addBox(s, { left: 48, top: 586, width: 1132, height: 58 }, BLACK);
-  addText(s, "真实边界：体验1当前按任务下载高清图，尚未接入整体报告使用的共享高清缓存。",
-    { left: 72, top: 602, width: 1084, height: 30 },
-    { fontSize: 18, bold: true, color: WHITE, alignment: "center" });
+  addHeader(s, "体验1流程①：AND筛选后，手动选图与自动选图走两条真实路径", "Layer 3A · selection flow", pageNumber++,
+    "Terra标签只负责缩小候选范围；最终送入Sol的图片由用户明确选择，或由系统按店铺均衡随机选取。");
+
+  flowNode(s, { position: { left: 48, top: 170, width: 226, height: 142 }, step: "01", title: "校验筛选条件", detail: "维度必须属于15维\n标签必须在受控字典" , accent: true });
+  flowArrow(s, { position: { left: 274, top: 218, width: 42, height: 42 } });
+  flowNode(s, { position: { left: 316, top: 170, width: 226, height: 142 }, step: "02", title: "SQLite执行AND", detail: "每一维都必须命中\nsource_url全局去重" });
+  flowArrow(s, { text: "↗", position: { left: 542, top: 178, width: 52, height: 52 } });
+  flowArrow(s, { text: "↘", position: { left: 542, top: 262, width: 52, height: 52 } });
+
+  addBox(s, { left: 596, top: 162, width: 612, height: 176 }, LIGHT_BLUE, "none", 8, "manual-lane");
+  addText(s, "手动选图", { left: 618, top: 182, width: 130, height: 28 }, { fontSize: 20, bold: true, color: BLUE });
+  addText(s, "用户提交 store_id＋product_id＋position；后端再次检查：键唯一、店铺在范围内、图片存在、仍满足AND条件；保持用户选择顺序，最多24张。",
+    { left: 618, top: 224, width: 566, height: 86 }, { fontSize: 17, color: INK });
+
+  addBox(s, { left: 596, top: 360, width: 612, height: 190 }, PANEL, "none", 8, "automatic-lane");
+  addText(s, "自动选图", { left: 618, top: 380, width: 130, height: 28 }, { fontSize: 20, bold: true });
+  addText(s, "先把每店候选池扩到目标数的8倍（单店12–32张、总池不超过160张），再用 SystemRandom 在各店内打乱；按店铺轮询取图，直到每店成功下载1–8张且总数≤24。",
+    { left: 618, top: 422, width: 566, height: 102 }, { fontSize: 17, color: MUTED });
+
+  flowArrow(s, { text: "↓", position: { left: 300, top: 320, width: 48, height: 48 } });
+  flowNode(s, { position: { left: 48, top: 382, width: 494, height: 168 }, step: "03", title: "下载高清图并明确记录失败", detail: "逐个尝试候选图；达到每店配额后停止。\n阈值：≥80万像素、长边≥1000、短边≥600。\n失败不会静默替代为低清图。" });
+
+  addBox(s, { left: 48, top: 584, width: 1160, height: 66 }, BLACK);
+  addText(s, "送入Sol的不是全部命中图，而是最终成功下载并通过高清门槛的1–24张。体验1目前仍按任务下载，尚未接入整体报告的共享高清缓存。",
+    { left: 72, top: 600, width: 1112, height: 40 },
+    { fontSize: 17, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
     sources.production,
@@ -757,37 +760,41 @@ let pageNumber = 2;
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "体验1流程②：Sol在一次调用里完成逐图观察与店铺比较", "Layer 3A · conclusion flow", pageNumber++,
-    "比较结论不是数据库公式；它由Sol基于本次选中的高清图生成，并被严格JSON结构约束。");
-  for (let i = 0; i < 4; i += 1) {
-    flowArrow(s, { position: { left: 254 + i * 236, top: 242, width: 38, height: 48 } });
-  }
-  const nodes = [
-    ["01", "输入证据", "固定筛选条件\n1–24张高清图\n店铺＋商品上下文"],
-    ["02", "Sol高精度观察", "场景 · 景别 · 动作\n光线 · 色彩 · 搭配\n服装结构 · 视觉意图"],
-    ["03", "逐图结构化结果", "可见事实 · 优缺点\n建议 · visible cue\n每图置信度"],
-    ["04", "跨图比较结果", "共同模式\n店铺差异＋各店总结\n可复用拍摄规则"],
-    ["05", "页面展示", "总体结论＋逐图证据\n建议＋A/B验证假设\nToken与费用"],
-  ];
-  nodes.forEach((node, index) => {
-    flowNode(s, {
-      position: { left: 48 + index * 236, top: 180, width: 206, height: 200 },
-      step: node[0], title: node[1], detail: node[2], accent: index === 1, dark: index === 4,
-    });
-  });
-  const rules = [
-    ["比较对象", "只比较这次实际送入Sol的图片；没有进入分析的图片不会影响结论。"],
-    ["统计边界", "体验1没有使用全店标签分布，不能据此声称某风格在整家店占比更高。"],
-    ["因果边界", "代码禁止把构图写成CTR/CVR因果，只能提出需要A/B验证的经营假设。"],
-  ];
-  rules.forEach((rule, index) => {
-    const left = 48 + index * 388;
-    addBox(s, { left, top: 420, width: 364, height: 178 }, index === 1 ? LIGHT_BLUE : PANEL, "none", 8, `experience1-rule-${index}`);
-    addText(s, rule[0], { left: left + 20, top: 440, width: 324, height: 26 },
-      { fontSize: 18, bold: true, color: index === 1 ? BLUE : INK }, `experience1-rule-title-${index}`);
-    addText(s, rule[1], { left: left + 20, top: 482, width: 324, height: 92 },
-      { fontSize: 16, color: MUTED }, `experience1-rule-body-${index}`);
-  });
+  addHeader(s, "体验1流程②：一次Sol调用同时返回逐图观察、跨店比较与建议", "Layer 3A · conclusion flow", pageNumber++,
+    "这不是先逐图调用、再额外汇总；1–24张高清图与筛选条件被放进同一个请求，由严格JSON一次返回完整结果。");
+
+  addBox(s, { left: 48, top: 166, width: 336, height: 430 }, LIGHT_BLUE, "none", 8, "experience1-input");
+  addText(s, "INPUT", { left: 70, top: 188, width: 90, height: 22 }, { fontSize: 14, typeface: FONT_LATIN, bold: true, color: BLUE });
+  addText(s, "固定筛选条件", { left: 70, top: 226, width: 270, height: 30 }, { fontSize: 21, bold: true });
+  addText(s, "例如 product_category=TOPS AND occasion=VACATION", { left: 70, top: 266, width: 286, height: 62 }, { fontSize: 16, typeface: FONT_LATIN, color: INK });
+  addRule(s, 70, 342, 286, "#AFCFE1", 2);
+  addText(s, "每张高清图上下文", { left: 70, top: 364, width: 270, height: 28 }, { fontSize: 20, bold: true });
+  addText(s, "store · product · title · category · pixels\n图片本体以 detail=high 发送", { left: 70, top: 406, width: 286, height: 74 }, { fontSize: 17, color: INK });
+  addText(s, "数量：1–24张", { left: 70, top: 520, width: 200, height: 28 }, { fontSize: 18, bold: true, color: BLUE });
+
+  flowArrow(s, { position: { left: 386, top: 338, width: 48, height: 48 } });
+  addBox(s, { left: 434, top: 166, width: 356, height: 430 }, PANEL, "none", 8, "experience1-reasoning");
+  addText(s, "SOL PROMPT", { left: 456, top: 188, width: 120, height: 22 }, { fontSize: 14, typeface: FONT_LATIN, bold: true, color: BLUE });
+  addText(s, "先事实，后解释", { left: 456, top: 226, width: 290, height: 30 }, { fontSize: 21, bold: true });
+  addText(s, "逐图观察：场景、景别、动作、光线、色彩、搭配、服装结构、视觉意图。\n\n每个判断都要 visible_cue；不得推断敏感属性；不得把构图写成CTR/CVR因果。",
+    { left: 456, top: 270, width: 310, height: 176 }, { fontSize: 17, color: MUTED });
+  addRule(s, 456, 468, 310, "#D0D2D6", 2);
+  addText(s, "同一请求内跨图比较", { left: 456, top: 490, width: 286, height: 28 }, { fontSize: 19, bold: true });
+  addText(s, "共同模式 · 店铺差异 · 各店视觉定位 · 可复用拍摄规则", { left: 456, top: 532, width: 310, height: 50 }, { fontSize: 16, color: MUTED });
+
+  flowArrow(s, { position: { left: 792, top: 338, width: 48, height: 48 } });
+  addBox(s, { left: 840, top: 166, width: 368, height: 430 }, BLACK, "none", 8, "experience1-output");
+  addText(s, "STRICT JSON OUTPUT", { left: 862, top: 188, width: 190, height: 22 }, { fontSize: 14, typeface: FONT_LATIN, bold: true, color: "#8FD4F2" });
+  addText(s, "逐图结果", { left: 862, top: 226, width: 200, height: 30 }, { fontSize: 21, bold: true, color: WHITE });
+  addText(s, "7项可见字段 · visual_intent\nstrengths · weaknesses · changes\nevidence claim＋visible_cue · confidence",
+    { left: 862, top: 270, width: 320, height: 112 }, { fontSize: 16, typeface: FONT_LATIN, color: "#D7D7D7" });
+  addText(s, "跨图结果", { left: 862, top: 414, width: 200, height: 30 }, { fontSize: 21, bold: true, color: WHITE });
+  addText(s, "selection thesis · shared patterns\ncross-store differences · store summaries\nshot system · A/B hypotheses",
+    { left: 862, top: 458, width: 320, height: 104 }, { fontSize: 16, typeface: FONT_LATIN, color: "#D7D7D7" });
+
+  addBox(s, { left: 48, top: 620, width: 1160, height: 34 }, BLACK);
+  addText(s, "结论只代表本次成功送入Sol的图片；没有全店分布，不得外推整店占比。图片索引和店铺摘要缺失或重复会直接失败。",
+    { left: 72, top: 627, width: 1112, height: 20 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
     `${sources.repo}/research/2026-08-18/scripts/analyze_dimension_selection.py`,
@@ -848,30 +855,53 @@ for (const demo of experience1Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "体验2流程①：全量数据算分布，高清图片负责视觉核验", "Layer 3B · evidence flow", pageNumber++,
-    "目标店铺与竞品的取图规则不同；二者合并前保留图片角色、店铺归属和入选原因。");
-  flowArrow(s, { text: "↗", position: { left: 200, top: 244, width: 64, height: 64 } });
-  flowArrow(s, { text: "↘", position: { left: 200, top: 404, width: 64, height: 64 } });
-  flowArrow(s, { position: { left: 450, top: 454, width: 44, height: 48 } });
-  flowArrow(s, { position: { left: 692, top: 454, width: 44, height: 48 } });
-  flowArrow(s, { text: "↘", position: { left: 458, top: 246, width: 64, height: 64 } });
-  flowArrow(s, { text: "↗", position: { left: 702, top: 370, width: 64, height: 64 } });
-  flowArrow(s, { position: { left: 948, top: 328, width: 44, height: 48 } });
-  flowNode(s, { position: { left: 48, top: 300, width: 160, height: 142 }, step: "01", title: "固定范围", detail: "TOPS＋SKIRTS\n目标＋竞品", accent: true });
-  flowNode(s, { position: { left: 258, top: 184, width: 198, height: 158 }, step: "02A", title: "目标店铺全量", detail: "范围内全部首图\n完成任务：386张\n角色=target" });
-  flowNode(s, { position: { left: 258, top: 408, width: 198, height: 174 }, step: "02B", title: "竞品全量分母", detail: "15,107张首图\n读取6个既有标签维度\n分别按店铺＋品类统计" });
-  flowNode(s, { position: { left: 500, top: 408, width: 198, height: 174 }, step: "03", title: "分层选证据", detail: "每维Top 2＋边界1\n组合簇Top 2＋边界1\n跨理由去重" });
-  flowNode(s, { position: { left: 742, top: 408, width: 206, height: 174 }, step: "04", title: "竞品高清证据", detail: "完成任务：106张\n保留典型/边界原因\n不是随机抽样" });
-  flowNode(s, { position: { left: 742, top: 184, width: 206, height: 158 }, step: "05", title: "共享高清缓存", detail: "命中则复用\n未命中才下载\n校验清晰度", accent: true });
-  flowNode(s, { position: { left: 992, top: 270, width: 216, height: 196 }, step: "06", title: "Sol逐图观察", detail: "386目标＋106竞品\n每8张一个批次\n高精度图片输入", dark: true });
-  addBox(s, { left: 48, top: 614, width: 1160, height: 40 }, BLACK);
-  addText(s, "六个选证据维度：穿着场合 · 拍摄场景 · 画面构图 · 视角动作 · 视觉语言 · 搭配方式",
-    { left: 72, top: 624, width: 1112, height: 22 }, { fontSize: 16, bold: true, color: WHITE, alignment: "center" });
+  addHeader(s, "体验2流程①：竞品按“店铺×品类”分层选证据", "Layer 3B · evidence selection", pageNumber++,
+    "15,107张竞品首图负责计算分布；高清证据图只负责让视觉判断可复核，不能替代全量分母。");
+
+  addBox(s, { left: 48, top: 166, width: 264, height: 442 }, LIGHT_BLUE, "none", 8, "target-population");
+  addText(s, "目标店铺", { left: 70, top: 188, width: 180, height: 28 }, { fontSize: 21, bold: true, color: BLUE });
+  addText(s, "Aloruh · TOPS＋SKIRTS", { left: 70, top: 230, width: 216, height: 28 }, { fontSize: 16, typeface: FONT_LATIN, bold: true });
+  metric(s, "415", "计划进入下载的全量首图", 70, 286, 190, true);
+  addRule(s, 70, 404, 216, "#AFCFE1", 2);
+  addText(s, "规则", { left: 70, top: 430, width: 80, height: 24 }, { fontSize: 18, bold: true });
+  addText(s, "范围内全部首图都进入下载队列，不使用标签筛掉目标店铺图片。成功下载386张。",
+    { left: 70, top: 470, width: 216, height: 112 }, { fontSize: 17, color: INK });
+
+  addBox(s, { left: 336, top: 166, width: 366, height: 442 }, PANEL, "none", 8, "competitor-population");
+  addText(s, "竞品全量分母", { left: 358, top: 188, width: 220, height: 28 }, { fontSize: 21, bold: true });
+  addText(s, "3家竞品 × 2个品类 = 6个独立池", { left: 358, top: 230, width: 316, height: 28 }, { fontSize: 17, color: MUTED });
+  metric(s, "15,107", "张竞品首图参与分布统计", 358, 286, 230);
+  addRule(s, 358, 404, 316, "#D0D2D6", 2);
+  addText(s, "每个池都读取6维标签", { left: 358, top: 430, width: 290, height: 28 }, { fontSize: 18, bold: true });
+  addText(s, "穿着场合 · 拍摄场景 · 画面构图\n视角动作 · 视觉语言 · 搭配方式\n缺任一维标签，整个池直接失败。",
+    { left: 358, top: 472, width: 316, height: 100 }, { fontSize: 17, color: MUTED });
+
+  addBox(s, { left: 726, top: 166, width: 482, height: 442 }, BLACK, "none", 8, "competitor-selection-algorithm");
+  addText(s, "每个竞品×品类池的选图算法", { left: 750, top: 188, width: 410, height: 30 }, { fontSize: 21, bold: true, color: WHITE });
+  const selectionSteps = [
+    ["01", "每一维按全量标签计数与占比排序"],
+    ["02", "选最高频2个标签＋达到约0.5%门槛后最少见的1个边界标签"],
+    ["03", "代表图按标签置信度最高 → catalog rank → product ID选出"],
+    ["04", "每图取6维最高置信度标签，形成六维组合签名"],
+    ["05", "组合簇再选Top 2＋有效边界1；最后跨维、理由、URL去重"],
+  ];
+  selectionSteps.forEach((row, index) => {
+    const y = 244 + index * 64;
+    addText(s, row[0], { left: 750, top: y, width: 34, height: 22 },
+      { fontSize: 14, typeface: FONT_LATIN, bold: true, color: "#8FD4F2" });
+    addText(s, row[1], { left: 796, top: y - 2, width: 384, height: 50 },
+      { fontSize: 16, color: "#D7D7D7" });
+  });
+  addText(s, "结果：计划107张竞品证据图；成功下载106张", { left: 750, top: 566, width: 420, height: 24 },
+    { fontSize: 17, bold: true, color: WHITE });
+
+  addBox(s, { left: 48, top: 628, width: 1160, height: 30 }, BLACK);
+  addText(s, "目标=全量进入；竞品=全量算分布后选典型/边界证据。两者进入Sol前都保留 store、product、category、role 与 selection_reasons。",
+    { left: 70, top: 634, width: 1116, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
     `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
     `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
-    `${sources.repo}/research/2026-08-14/explorer/report_pdf.py`,
   ]);
 }
 
@@ -879,43 +909,127 @@ for (const demo of experience1Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "体验2流程②：比较结论由“分布＋逐图观察＋程序校验”共同形成", "Layer 3B · conclusion flow", pageNumber++,
-    "Sol负责解释和写结论；程序负责限定分母、图片ID、品牌归属和五章结构，最后由用户逐章审核。");
-  for (let i = 0; i < 4; i += 1) {
-    flowArrow(s, { position: { left: 254 + i * 236, top: 242, width: 38, height: 48 } });
-  }
-  const nodes = [
-    ["01", "批次逐图观察", "10项可见字段\n优缺点＋证据线索\n候选模式"],
-    ["02", "合并完整证据", "492张逐图观察\n图片—店铺映射\n竞品全量分布"],
-    ["03", "Sol二次合成", "生成五个Section\n每章2–6条结论\n写明推导过程"],
-    ["04", "程序硬校验", "图片ID必须存在\n三家竞品分别点名\n证据图品牌一致"],
-    ["05", "审核后交付", "逐章通过或单章重跑\n五章通过后本地排版\nPDF不再调用模型"],
+  addHeader(s, "体验2流程②：成功下载的492张图片全部逐图分析，没有再抽一层", "Layer 3B · per-image analysis", pageNumber++,
+    "计划选入522张；30张高清下载失败后，386张目标图＋106张竞品图全部进入Sol逐图观察。");
+
+  const counts = [
+    ["计划范围", "522", "415目标＋107竞品"],
+    ["成功下载", "492", "386目标＋106竞品"],
+    ["下载失败", "30", "记录图片/店铺/商品/错误"],
+    ["逐图批次", "62", "每批最多8张"],
   ];
-  nodes.forEach((node, index) => {
-    flowNode(s, {
-      position: { left: 48 + index * 236, top: 180, width: 206, height: 200 },
-      step: node[0], title: node[1], detail: node[2], accent: index === 2, dark: index === 4,
-    });
+  counts.forEach((item, index) => {
+    const left = 48 + index * 290;
+    addBox(s, { left, top: 166, width: 266, height: 142 }, index === 1 ? LIGHT_BLUE : PANEL, "none", 8, `count-${index}`);
+    addText(s, item[0], { left: left + 20, top: 184, width: 120, height: 22 }, { fontSize: 16, bold: true, color: index === 1 ? BLUE : MUTED });
+    addText(s, item[1], { left: left + 20, top: 218, width: 100, height: 54 }, { fontSize: 38, typeface: FONT_LATIN, bold: true, color: index === 1 ? BLUE : INK });
+    addText(s, item[2], { left: left + 114, top: 224, width: 132, height: 58 }, { fontSize: 16, color: INK });
   });
-  const evidenceRules = [
-    ["频率与占比", "只能引用15,107张竞品全量标签分布；106张高清证据不能冒充全量占比。"],
-    ["视觉解释", "来自492张Sol逐图观察；每条结论返回支持图、反例图、代表图和观察字段。"],
-    ["品牌比较", "Princess Polly、Motel Rocks、PrettyLittleThing必须分别成结论，并使用本品牌图片。"],
-  ];
-  evidenceRules.forEach((rule, index) => {
-    const left = 48 + index * 388;
-    addBox(s, { left, top: 420, width: 364, height: 178 }, index === 0 ? LIGHT_BLUE : PANEL, "none", 8, `experience2-rule-${index}`);
-    addText(s, rule[0], { left: left + 20, top: 440, width: 324, height: 26 },
-      { fontSize: 18, bold: true, color: index === 0 ? BLUE : INK }, `experience2-rule-title-${index}`);
-    addText(s, rule[1], { left: left + 20, top: 482, width: 324, height: 92 },
-      { fontSize: 16, color: MUTED }, `experience2-rule-body-${index}`);
-  });
+
+  flowArrow(s, { text: "↓", position: { left: 600, top: 314, width: 48, height: 48 } });
+  addBox(s, { left: 48, top: 370, width: 740, height: 246 }, BLACK, "none", 8, "per-image-output");
+  addText(s, "每张图必须返回的可见观察", { left: 72, top: 392, width: 320, height: 30 }, { fontSize: 21, bold: true, color: WHITE });
+  addText(s, "scene · framing · pose_action · lighting · palette\nstyling · garment_display · first_image_type · brand_signal · text_overlay",
+    { left: 72, top: 438, width: 690, height: 66 }, { fontSize: 17, typeface: FONT_LATIN, color: "#D7D7D7" });
+  addText(s, "＋ visual_role · strengths · weaknesses · evidence_cues（至少2条）· confidence",
+    { left: 72, top: 528, width: 690, height: 28 }, { fontSize: 17, typeface: FONT_LATIN, color: "#8FD4F2" });
+  addText(s, "每批同时返回2–10个候选模式，并列支持图与反例图。批内图片ID缺失或重复，整批失败。",
+    { left: 72, top: 572, width: 690, height: 28 }, { fontSize: 16, color: WHITE });
+
+  addBox(s, { left: 814, top: 370, width: 394, height: 246 }, LIGHT_BLUE, "none", 8, "merged-evidence");
+  addText(s, "汇总证据包", { left: 836, top: 392, width: 220, height: 30 }, { fontSize: 21, bold: true, color: BLUE });
+  addText(s, "492张逐图观察\n全部批次候选模式\n图片—店铺—商品—角色映射\n15,107张竞品全量标签分布\n竞品证据图的入选原因\n报告范围与排除指标",
+    { left: 836, top: 438, width: 346, height: 158 }, { fontSize: 17, color: INK });
+
+  addBox(s, { left: 48, top: 636, width: 1160, height: 24 }, BLACK);
+  addText(s, "然后只进行1次Sol汇总调用，同时生成五个Section；总调用数=62次逐图批次＋1次汇总。",
+    { left: 72, top: 639, width: 1112, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
     `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
     `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
-    `${sources.repo}/research/2026-08-14/explorer/report_reviews.py`,
-    `${sources.repo}/research/2026-08-14/explorer/report_pdf.py`,
+  ]);
+}
+
+// Experience 2 workflow: explain how the five sections are produced.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "体验2流程③：五个Section共享同一证据包，不是五次独立分析", "Layer 3B · five-section logic", pageNumber++,
+    "一次Sol汇总响应同时返回五章。章节语义由section_id、中文标题和统一Prompt限定；观察字段分工不是程序硬编码。");
+
+  const rows = [
+    ["品牌视觉定位校准", "目标店铺逐图观察", "常用：brand_signal · palette · styling · scene", "Prompt语义约束；2–6条claim"],
+    ["商品展示分析", "目标店铺逐图观察", "常用：garment_display · framing · first_image_type", "Prompt语义约束；2–6条claim"],
+    ["店铺视觉审计", "目标店铺跨图观察", "常用：scene · lighting · palette · 一致性", "Prompt语义约束；2–6条claim"],
+    ["竞品视觉差距", "目标观察＋竞品分布＋106图", "6维全量占比＋10项高清观察", "三品牌点名＋品牌证据硬校验"],
+    ["视觉升级方向", "同一完整证据包", "把可见问题转成拍摄/图序/表达建议", "与前四章同时生成；无顺序依赖"],
+  ];
+  const colX = [48, 314, 574, 892];
+  const colW = [250, 244, 302, 316];
+  ["SECTION", "主要证据范围", "模型可用的判断视角", "真实约束"].forEach((title, index) => {
+    addBox(s, { left: colX[index], top: 164, width: colW[index], height: 46 }, index === 0 ? BLACK : PANEL);
+    addText(s, title, { left: colX[index] + 14, top: 176, width: colW[index] - 28, height: 22 },
+      { fontSize: 16, typeface: index === 0 ? FONT_LATIN : FONT, bold: true, color: index === 0 ? WHITE : INK });
+  });
+  rows.forEach((row, rowIndex) => {
+    const y = 216 + rowIndex * 82;
+    row.forEach((value, colIndex) => {
+      addBox(s, { left: colX[colIndex], top: y, width: colW[colIndex], height: 74 }, rowIndex === 3 && colIndex === 3 ? LIGHT_BLUE : WHITE, "#D7D9DD");
+      addText(s, value, { left: colX[colIndex] + 14, top: y + 12, width: colW[colIndex] - 28, height: 52 },
+        { fontSize: 16, bold: colIndex === 0, color: rowIndex === 3 && colIndex === 3 ? BLUE : colIndex === 0 ? INK : MUTED });
+    });
+  });
+  addBox(s, { left: 48, top: 638, width: 1160, height: 24 }, BLACK);
+  addText(s, "重要：第五章不是读取前四章成品后再计算；五章在同一JSON响应里同时形成。",
+    { left: 72, top: 641, width: 1112, height: 18 }, { fontSize: 16, bold: true, color: WHITE, alignment: "center" });
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
+    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
+  ]);
+}
+
+// Experience 2 workflow: claim contract, hard checks, review, and PDF.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "体验2流程④：每条结论如何从观察进入可审核PDF", "Layer 3B · claim contract", pageNumber++,
+    "Sol写结论与推导；JSON Schema固定证据字段；程序阻断错误ID和竞品错配；用户逐章决定是否采用。");
+
+  const nodes = [
+    ["01", "Sol生成结论", "结论＋推导\n每章2–6条"],
+    ["02", "证据范围", "样本数＋筛选条件\n观察字段"],
+    ["03", "图片证据", "支持图＋反例图\n代表图"],
+    ["04", "程序硬校验", "五章齐全且不重复\nID必须来自输入"],
+    ["05", "人工审核", "满意=通过\n不满意=仅重跑该章"],
+    ["06", "本地排版PDF", "五章全通过后生成\n不再调用模型"],
+  ];
+  for (let i = 0; i < 5; i += 1) {
+    flowArrow(s, { position: { left: 230 + i * 196, top: 250, width: 34, height: 42 } });
+  }
+  nodes.forEach((node, index) => {
+    flowNode(s, {
+      position: { left: 48 + index * 196, top: 178, width: 176, height: 190 },
+      step: node[0], title: node[1], detail: node[2], accent: index === 1, dark: index === 5,
+    });
+  });
+
+  addBox(s, { left: 48, top: 408, width: 560, height: 196 }, LIGHT_BLUE, "none", 8, "hard-validation");
+  addText(s, "程序硬校验（失败就不出报告）", { left: 70, top: 430, width: 420, height: 28 }, { fontSize: 20, bold: true, color: BLUE });
+  addText(s, "• 每批逐图观察必须恰好覆盖输入图片ID\n• 五个section_id必须各出现一次\n• 每条claim引用的图片ID必须来自492张输入\n• competitive_gap必须分别点名三家竞品，且支持/代表图属于对应品牌",
+    { left: 70, top: 474, width: 510, height: 110 }, { fontSize: 17, color: INK });
+
+  addBox(s, { left: 632, top: 408, width: 576, height: 196 }, PANEL, "none", 8, "soft-validation");
+  addText(s, "Prompt软约束＋人工审核", { left: 654, top: 430, width: 360, height: 28 }, { fontSize: 20, bold: true });
+  addText(s, "• 非竞品章节只用目标店铺证据，当前主要靠Prompt约束\n• 五章具体语义没有五套独立字段公式\n• 视觉升级章与前四章同时生成，不是程序串行推导\n• 不满意时携带原章节、审核意见、scope和完整evidence单章重跑",
+    { left: 654, top: 474, width: 526, height: 110 }, { fontSize: 17, color: MUTED });
+
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
+    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
+    `${sources.repo}/research/2026-08-14/explorer/src/Reports.jsx`,
   ]);
 }
 
@@ -1006,6 +1120,189 @@ for (const demo of experience2Demos) {
   addNotes(s, [`${sources.repo}/tmp/pdfs/production-semantic-22a1362.pdf`, `${sources.repo}/tmp/pdfs/semantic-pages-22a1362/`]);
 }
 
+// Appendix A1: complete Terra prompt, general rules and dimensions 1–3.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A1/8：Terra完整Prompt — 通用规则＋维度1–3", "Prompt appendix · code verbatim", pageNumber++,
+    "以下文本来自_taxonomy_prompt()；仅为适配页面人工换行，单词与标签未改写。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 246 }, "统一规则（完整）", [
+    "Analyze every numbered fashion image using exactly the controlled codes below. Use visible",
+    "evidence and the supplied title/category only. Select UNKNOWN when a dimension is not observable,",
+    "and never combine UNKNOWN with another code. Do not infer ethnicity, health, attractiveness or",
+    "other sensitive traits. product_category must have exactly one value. Other dimensions may have",
+    "up to five values. Focus on the primary item sold; accessories belong in styling unless they are",
+    "the primary product. Return every image once.",
+  ], true);
+  addCodeBlock(s, { left: 48, top: 432, width: 1160, height: 214 }, "受控标签字典 01–03 / 15", [
+    "product_category: DRESSES, TOPS, SKIRTS, TROUSERS, SHORTS, SWIMWEAR, OUTERWEAR, JEANS, JUMPSUITS, PLAYSUITS, SETS, LINGERIE, ACCESSORIES, SHOES, OTHER, UNKNOWN",
+    "silhouette_fit: BODYCON, FITTED, SLIM, REGULAR, RELAXED, OVERSIZED, A_LINE, STRAIGHT, FLARED, DRAPED, CORSETED, UNKNOWN",
+    "design_elements: BACKLESS, CUTOUT, HALTER, OFF_SHOULDER, STRAPLESS, SPAGHETTI_STRAP, LACE_UP, SLIT, RUFFLE, TIE_DETAIL, RUCHED, ASYMMETRIC, SHEER_PANEL, EMBELLISHED, PLEATED, UNKNOWN",
+  ]);
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`,
+    `${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`,
+  ]);
+}
+
+// Appendix A2: complete Terra prompt, dimensions 4–8.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A2/8：Terra完整Prompt — 维度4–8", "Prompt appendix · code verbatim", pageNumber++,
+    "这些维度行紧接在统一规则后面；它们是允许返回的代码集合，不是五次独立请求。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 486 }, "受控标签字典 04–08 / 15", [
+    "occasion: CASUAL, GOING_OUT, PARTY, DATE_NIGHT, VACATION, BEACH, POOL, WEDDING_GUEST, FESTIVAL, COMMUTE, FORMAL, HOME, UNKNOWN",
+    "",
+    "composition: FULL_BODY, THREE_QUARTER, HALF_BODY, CLOSE_UP, DETAIL, FLAT_LAY, PRODUCT_ONLY, UNKNOWN",
+    "",
+    "view_action: FRONT_VIEW, SIDE_VIEW, BACK_VIEW, TURNING_BACK, WALKING, SITTING, STANDING, MIRROR_SELFIE, HAIR_MOVED, LOOKING_AWAY, INTERACTING_WITH_SCENE, UNKNOWN",
+    "",
+    "selling_points: NECKLINE, SHOULDERS, BACK, WAIST, WAIST_HIP, LEGS, HEMLINE, SLEEVES, FABRIC_TEXTURE, DRAPE, PRINT, FULL_OUTFIT, UNKNOWN",
+    "",
+    "scene: STUDIO_NEUTRAL, HOME, MIRROR, BEDROOM, GARDEN, STREET, BEACH, POOL, PARTY, NIGHT, ARCHITECTURE, NATURE, OTHER, UNKNOWN",
+  ], true);
+  addFooter(s);
+  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`]);
+}
+
+// Appendix A3: complete Terra prompt, dimensions 9–12.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A3/8：Terra完整Prompt — 维度9–12", "Prompt appendix · code verbatim", pageNumber++,
+    "长标签行按页面宽度自动换行；标签拼写与代码完全一致。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 486 }, "受控标签字典 09–12 / 15", [
+    "material_texture: KNIT, LACE, SATIN_LIKE, SILK_LIKE, DENIM, COTTON_LIKE, CHIFFON, MESH, SEQUIN, LEATHER_LIKE, RIBBED, CROCHET, PLEATED, UNKNOWN",
+    "",
+    "color_pattern: COLOR_BLACK, COLOR_WHITE, COLOR_GREY, COLOR_BEIGE, COLOR_BROWN, COLOR_RED, COLOR_PINK, COLOR_ORANGE, COLOR_YELLOW, COLOR_GREEN, COLOR_BLUE, COLOR_PURPLE, COLOR_METALLIC, COLOR_MULTI, PATTERN_SOLID, PATTERN_FLORAL, PATTERN_STRIPE, PATTERN_CHECK, PATTERN_ANIMAL, PATTERN_ABSTRACT, PATTERN_GRAPHIC, UNKNOWN",
+    "",
+    "visual_language: ECOMMERCE_CLEAN, EDITORIAL, LIFESTYLE, SOCIAL_UGC, ROMANTIC, VINTAGE, Y2K, MINIMAL, GLAMOROUS, SOFT_LIGHT, NATURAL_LIGHT, DIRECT_FLASH, WARM_TONE, COOL_TONE, UNKNOWN",
+    "",
+    "styling: SINGLE_ITEM, FULL_LOOK, LAYERED, ACCESSORIES_VISIBLE, HANDBAG, SHOES_VISIBLE, JEWELRY, MATCHING_SET, SWIM_COVERUP, UNKNOWN",
+  ], true);
+  addFooter(s);
+  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`]);
+}
+
+// Appendix A4: complete Terra prompt, dimensions 13–15 and request wrapper.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A4/8：Terra完整Prompt — 维度13–15＋请求封装", "Prompt appendix · complete request", pageNumber++,
+    "至此通用规则与15个维度已完整列出；同一请求还会为每张图片追加上下文，并使用严格JSON Schema。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 264 }, "受控标签字典 13–15 / 15", [
+    "lighting: SOFT_DIFFUSED, NATURAL_DAYLIGHT, HARD_DIRECT, DIRECT_FLASH, WARM_AMBIENT, COOL_AMBIENT, LOW_KEY, HIGH_KEY, MIXED_LIGHT, UNKNOWN",
+    "",
+    "model_state: NO_MODEL, STANDING_POSE, WALKING_MOTION, SITTING_POSE, LOOKING_CAMERA, LOOKING_AWAY, FACE_CROPPED, MIRROR_SELFIE, INTERACTING, UNKNOWN",
+    "",
+    "graphic_overlay: NONE, TEXT_OVERLAY, PRICE_PROMOTION, LOGO_WATERMARK, COLLAGE, FRAME_BORDER, STICKER_GRAPHIC, UI_SCREENSHOT, UNKNOWN",
+  ], true);
+  addCodeBlock(s, { left: 48, top: 452, width: 564, height: 190 }, "每图追加的真实上下文格式", [
+    "IMAGE {index}; key={item.key}; title={title|unknown};",
+    "current_category={category|unknown}; position={position}",
+    "＋ input_image(detail=low)",
+  ]);
+  addCodeBlock(s, { left: 636, top: 452, width: 572, height: 190 }, "严格输出契约", [
+    "items[]: i + tags{15 dimensions} + confidence{15 dimensions}",
+    "product_category exactly 1; other dimensions 1–5 values",
+    "每张输入图必须恰好返回一次；漏图、重复图、漏维度均失败。",
+  ]);
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`,
+    `${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`,
+  ]);
+}
+
+// Appendix A5: complete Experience 1 Sol prompt.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A5/8：体验1 Sol完整Prompt", "Prompt appendix · experience 1", pageNumber++,
+    "代码原文来自detailed_visual_analysis.py；固定筛选条件在末尾以JSON拼接。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 330 }, "_prompt(filters) 完整文本", [
+    "你是一名电商女装视觉策略负责人。请对同一固定维度组合下的多店铺高清商品图做精细视觉分析，输出中文。",
+    "先写肉眼可见事实，再写解释；每个判断都要给 visible_cue。不要推断种族、健康、吸引力等敏感属性。",
+    "不要把构图相关性写成 CTR/CVR 因果；经营影响只能写成待 A/B 验证的假设。重点比较：场景、景别、",
+    "模特动作、光线、色彩、搭配、服装结构呈现、视觉意图、店铺一致性，并沉淀可复用的",
+    "构图-动作-卖点-场景 规则。固定筛选条件：{filters JSON}",
+  ], true);
+  addCodeBlock(s, { left: 48, top: 518, width: 1160, height: 126 }, "每图追加上下文", [
+    "IMAGE {index}; store={store_id}; product={product_id}; title={title}; category={category}; pixels={width}x{height} ＋ input_image(detail=high)",
+  ]);
+  addFooter(s);
+  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/detailed_visual_analysis.py`]);
+}
+
+// Appendix A6: complete Experience 2 per-image Sol prompt.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A6/8：体验2逐图 Sol完整Prompt", "Prompt appendix · experience 2 observations", pageNumber++,
+    "该Prompt在每个8图批次重复使用；图片上下文保留角色、品牌和竞品证据入选原因。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 318 }, "_image_prompt() 完整文本", [
+    "你是女装品牌视觉诊断分析师。逐张分析高清商品图，先记录肉眼可见事实，再写优缺点。",
+    "不得使用销量、曝光、点击、转化或ROI，不得推断敏感属性。旧分类标签仅是上下文，",
+    "不能替代本次观察。证据线索必须能在图片中复核。竞品图只用于对照，不代表目标店铺。",
+    "竞品图由全量视觉维度分布分层选出；selection_reasons说明其典型或边界证据角色。",
+  ], true);
+  addCodeBlock(s, { left: 48, top: 506, width: 1160, height: 138 }, "每图追加上下文", [
+    "{image_id, store_id, product_id, category, role, selection_reasons}",
+    "＋ input_image(detail=high)",
+    "严格Schema要求每张图返回10项observable、visual_role、strengths、weaknesses、evidence_cues、confidence。",
+  ]);
+  addFooter(s);
+  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`]);
+}
+
+// Appendix A7: complete Experience 2 synthesis prompt.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A7/8：体验2五章汇总 Sol完整Prompt", "Prompt appendix · experience 2 synthesis", pageNumber++,
+    "该Prompt只调用一次；末尾拼接scope JSON与完整EVIDENCE JSON，五章在同一响应中返回。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 482 }, "_synthesis_prompt(scope) 完整文本", [
+    "基于逐图观察与批次模式，生成模仿品牌视觉诊断成品PDF结构的专项分析草稿。每条结论必须说明推导方法，",
+    "列支持图、反例图、代表图、样本数和观察字段；不得引用未提供的图片ID。目标店铺全量图片用于结论，",
+    "竞品高清分层证据集只用于视觉差距。竞品模式判断必须以competitor_evidence中的全量维度分布为分母，",
+    "高清代表图只用于复核典型模式与边界反例，不得把代表图数量冒充全量占比。competitive_gap必须分别包含",
+    "Princess Polly、Motel Rocks、PrettyLittleThing三家品牌，每家至少一条独立结论；结论或推导必须写出品牌名，",
+    "支持图或代表图必须来自该品牌。不得写销售、流量、点击、转化或ROI结论。五个章节必须各出现一次：",
+    "brand_positioning=品牌视觉定位校准；product_display=商品展示分析；store_visual_audit=店铺视觉审计；",
+    "competitive_gap=竞品视觉差距；visual_upgrade=视觉升级方向。范围：{scope JSON}",
+    "EVIDENCE:{complete evidence JSON}",
+  ], true);
+  addFooter(s);
+  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`]);
+}
+
+// Appendix A8: complete section revision prompt.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A8/8：单章修订 Sol完整Prompt", "Prompt appendix · section revision", pageNumber++,
+    "用户判定某章不满意时，只重跑该section；其他四章不重新分析，已完成逐图观察也不重做。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 376 }, "revise(section, suggestion, evidence, scope) 完整文本", [
+    "根据审核意见重新分析一个视觉诊断章节。只能使用给定证据，不得编造图片ID。",
+    "保留可支持的结论，修改证据不足或表达不清的部分。输出中文。",
+    "",
+    "SECTION={current section JSON}",
+    "REVIEW={user suggestion}",
+    "SCOPE={scope JSON}",
+    "EVIDENCE={complete evidence JSON}",
+  ], true);
+  addBox(s, { left: 48, top: 566, width: 1160, height: 78 }, BLACK, "none", 8);
+  addText(s, "修订仍使用单章严格Schema，并再次检查图片ID；若修订competitive_gap，还会再次执行三品牌点名与品牌证据归属校验。",
+    { left: 72, top: 588, width: 1112, height: 34 }, { fontSize: 17, bold: true, color: WHITE, alignment: "center" });
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
+    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
+  ]);
+}
+
 // Discussion.
 {
   const s = p.slides.add();
@@ -1046,7 +1343,7 @@ for (const [index, slide] of p.slides.items.entries()) {
   await fs.writeFile(path.join(RENDERS, `${stem}.layout.json`), await layout.text());
 }
 await writeBlob(path.join(RENDERS, "montage.webp"), await p.export({ format: "webp", montage: true, scale: 1 }));
-const snapshot = await p.inspect({ kind: "slide,textbox,shape,image,notes", maxChars: 20000 });
+const snapshot = await p.inspect({ kind: "slide,textbox,shape,image,notes", maxChars: 100000 });
 await fs.writeFile(path.join(TMP, "deck-inspect.ndjson"), snapshot.ndjson, "utf8");
 const pptx = await PresentationFile.exportPptx(p);
 await pptx.save(FINAL);
