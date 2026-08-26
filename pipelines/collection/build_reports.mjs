@@ -2,9 +2,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const base = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dataDir = path.join(base, "data");
-const analysisDir = path.join(base, "analysis");
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const dataDir = path.join(projectRoot, "data");
+const analysisDir = path.join(projectRoot, "output", "analysis");
 const stores = ["princess_polly", "motel", "prettylittlething"];
 
 const readJson = async file => JSON.parse(await fs.readFile(file, "utf8"));
@@ -133,7 +133,7 @@ function build(store) {
 }
 
 for (const store of stores) {
-  const dir = path.join(base, "reports", store);
+  const dir = path.join(projectRoot, "output", "reports", store);
   await fs.mkdir(dir, { recursive: true });
   const artifact = build(store);
   await fs.writeFile(path.join(dir, "artifact.json"), JSON.stringify(artifact, null, 2));

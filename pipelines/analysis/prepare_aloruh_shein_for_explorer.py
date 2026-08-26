@@ -8,9 +8,9 @@ from pathlib import Path
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INPUT = ROOT / "data"
-DEFAULT_OUTPUT = ROOT.parent / "2026-08-14" / "data"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_INPUT = PROJECT_ROOT / "data"
+DEFAULT_OUTPUT = PROJECT_ROOT / "data"
 
 CATEGORY_NAMES = {
     "12480": "Maxi Dresses", "12475": "Mini Dresses", "1779": "Tank Tops",

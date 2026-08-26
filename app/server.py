@@ -22,10 +22,11 @@ from visual_reports import REPORT_ID, VisualReportCatalog
 
 
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = Path(os.environ.get("FASHION_SCOPE_DATA_DIR", ROOT.parent / "data"))
+REPO_ROOT = ROOT.parent
+DATA_DIR = Path(os.environ.get("FASHION_SCOPE_DATA_DIR", REPO_ROOT / "data"))
 DB_PATH = ROOT / "explorer.db"
 DIST_DIR = ROOT / "dist"
-DEFAULT_ANALYSIS_SCRIPT_DIR = ROOT.parents[1] / "2026-08-18" / "scripts"
+DEFAULT_ANALYSIS_SCRIPT_DIR = REPO_ROOT / "pipelines" / "analysis"
 ANALYSIS_SCRIPT_DIR = Path(os.environ.get(
     "FASHION_SCOPE_ANALYSIS_SCRIPTS", DEFAULT_ANALYSIS_SCRIPT_DIR,
 ))
@@ -37,7 +38,6 @@ DETAILED_OUTPUT_DIR = Path(os.environ.get(
 REPORT_ANALYSIS_OUTPUT_DIR = Path(os.environ.get(
     "FASHION_SCOPE_REPORT_ANALYSIS_OUTPUT_DIR", ROOT / "runtime" / "report_analysis_jobs",
 ))
-REPO_ROOT = ROOT.parents[2]
 REPORT_PDF_DIR = Path(os.environ.get(
     "FASHION_SCOPE_REPORT_PDF_DIR", REPO_ROOT / "output" / "pdf",
 ))

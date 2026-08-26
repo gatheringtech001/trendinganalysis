@@ -2,6 +2,7 @@
 .playwright-cli/
 **/__pycache__/
 **/node_modules/
+.venv/
 *.pyc
 *.db
 .env
@@ -12,6 +13,9 @@
 generated/
 recreated-dashboard/
 screenshots/
+data/
+app/dist/
+app/runtime/
 research/**/analysis/
 research/**/backups/
 research/**/data/
@@ -27,14 +31,18 @@ output/pdf/image_cache/
 output/playwright/
 output/visual-analysis-*/
 
-# Scratch presentation files: keep only the reproducible source and assets
+# Generated presentation previews; keep source and selected assets only
+slides/**/cover-candidates/
+slides/**/final-render*/
+slides/**/montage-input/
+slides/**/renders*/
+slides/**/cover-candidates.png
+slides/**/deck-inspect.ndjson
+slides/**/*montage*.png
+slides/**/screenshots-montage.png
+
+# Scratch files
 tmp/*
-!tmp/slides-fashion-scope-20260825/
-tmp/slides-fashion-scope-20260825/*
-!tmp/slides-fashion-scope-20260825/assets/
-!tmp/slides-fashion-scope-20260825/assets/**
-!tmp/slides-fashion-scope-20260825/build_deck.mjs
-!tmp/slides-fashion-scope-20260825/source-notes.txt
 
 # Keep only the current presentation deliverable
 output/*.pptx

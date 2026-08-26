@@ -21,8 +21,9 @@ from fashion_image_analysis import (
 )
 
 
-DEFAULT_DB = Path(__file__).parents[2] / "2026-08-14" / "explorer" / "explorer.db"
-DEFAULT_DATA = Path(__file__).parents[2] / "2026-08-14" / "data"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_DB = PROJECT_ROOT / "app" / "explorer.db"
+DEFAULT_DATA = PROJECT_ROOT / "data"
 STORE_FILES = {
     "motel": "images_motel.jsonl",
     "princess_polly": "images_princess_polly.jsonl",

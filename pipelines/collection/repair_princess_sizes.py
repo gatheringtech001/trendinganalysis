@@ -7,7 +7,7 @@ from pathlib import Path
 from collect_catalogs import normalize_shopify
 
 
-BASE = Path(__file__).resolve().parents[1]
+BASE = Path(__file__).resolve().parents[2]
 DATA = BASE / "data"
 STORES = {
     "princess_polly": "https://us.princesspolly.com",
@@ -23,7 +23,7 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 def rebuild(store: str, base_url: str) -> dict:
-    with gzip.open(BASE / "raw" / f"{store}_products.json.gz", "rt", encoding="utf-8") as handle:
+    with gzip.open(DATA / "raw" / f"{store}_products.json.gz", "rt", encoding="utf-8") as handle:
         products = json.load(handle)
     rows = [normalize_shopify(store, base_url, product, rank) for rank, product in enumerate(products, 1)]
     write_jsonl(DATA / f"catalog_{store}.jsonl", rows)

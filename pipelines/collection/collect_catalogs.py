@@ -16,10 +16,10 @@ from urllib.parse import urlencode
 import requests
 
 
-ROOT = Path(__file__).resolve().parents[1]
-RAW = ROOT / "raw"
-DATA = ROOT / "data"
-IMAGES = ROOT / "sample_images"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RAW = PROJECT_ROOT / "data" / "raw"
+DATA = PROJECT_ROOT / "data"
+IMAGES = PROJECT_ROOT / "data" / "sample_images"
 RETRIEVED_AT = "2026-08-14T00:00:00+08:00"
 UA = "Mozilla/5.0 (compatible; store-research/1.0; +read-only)"
 SESSION = requests.Session()
@@ -377,7 +377,7 @@ def download_image(item: dict) -> dict:
         target = IMAGES / item["store_id"] / f"{item['product_id'].replace('/', '_').replace('#', '_')}{ext}"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(response.content)
-        return {"store_id": item["store_id"], "product_id": item["product_id"], "status": "ok", "path": str(target.relative_to(ROOT)),
+        return {"store_id": item["store_id"], "product_id": item["product_id"], "status": "ok", "path": str(target.relative_to(PROJECT_ROOT)),
                 "content_sha256": sha(response.content), "bytes": len(response.content), "source_url": url}
     except Exception as exc:
         return {"store_id": item["store_id"], "product_id": item["product_id"], "status": "error", "error": str(exc)[:180], "source_url": url}

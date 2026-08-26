@@ -12,9 +12,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 
-BASE = Path(__file__).resolve().parents[1]
+BASE = Path(__file__).resolve().parents[2]
 DATA = BASE / "data"
-ANALYSIS = BASE / "analysis"
+ANALYSIS = BASE / "output" / "analysis"
 STORES = ["princess_polly", "motel", "prettylittlething"]
 NAMES = {
     "princess_polly": "Princess Polly",

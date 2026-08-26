@@ -12,7 +12,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 
 
-ROOT = Path(__file__).parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 BASE_PATH = Path(__file__).with_name("build_aloruh_visual_report.py")
 SPEC = importlib.util.spec_from_file_location("base_report", BASE_PATH)
 B = importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(B)

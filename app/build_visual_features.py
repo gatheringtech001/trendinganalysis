@@ -7,8 +7,8 @@ import cv2
 import numpy as np
 
 
-RESEARCH_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = RESEARCH_ROOT / "data"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
 PLACEHOLDERS = {("prettylittlething", "PLT15094#white")}
 
 HUE_FAMILIES = (
@@ -77,9 +77,9 @@ def _features(image: np.ndarray) -> dict:
 
 def _row(download: dict) -> dict:
     relative = Path(download["path"])
-    store_id = relative.parts[1]
+    store_id = relative.parent.name
     product_id = str(download["product_id"])
-    image = _read_image(RESEARCH_ROOT / relative)
+    image = _read_image(PROJECT_ROOT / relative)
     base = {
         "store_id": store_id,
         "product_id": product_id,

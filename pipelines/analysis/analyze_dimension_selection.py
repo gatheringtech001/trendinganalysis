@@ -15,8 +15,9 @@ from fashion_image_analysis import DIMENSIONS, TAXONOMY
 from high_resolution_images import download_high_resolution_image
 
 
-DEFAULT_DB = Path(__file__).parents[2] / "2026-08-14" / "explorer" / "explorer.db"
-DEFAULT_OUTPUT_ROOT = Path(__file__).parents[2] / "2026-08-19" / "detailed_visual"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_DB = PROJECT_ROOT / "app" / "explorer.db"
+DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "detailed_visual"
 
 
 def _read_filters(value: str) -> dict[str, str]:

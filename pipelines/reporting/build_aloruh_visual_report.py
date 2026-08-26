@@ -18,12 +18,12 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 
 
-ROOT = Path(__file__).parents[3]
-DB = ROOT / "research/2026-08-14/explorer/explorer.db"
-DATA = ROOT / "research/2026-08-14/data"
+ROOT = Path(__file__).resolve().parents[2]
+DB = ROOT / "app/explorer.db"
+DATA = ROOT / "data"
 OUT = ROOT / "output/pdf/Aloruh纯视觉诊断.pdf"
 NOTES = ROOT / "output/pdf/Aloruh纯视觉诊断-source-notes.json"
-CACHE = ROOT / "tmp/pdfs/aloruh-visual-report/images"
+CACHE = ROOT / "output/pdf/image_cache/prototype"
 PAGE = landscape((7.5 * inch, 13.333 * inch))
 INK, MUTED, BG = HexColor("#201B1C"), HexColor("#756B6C"), HexColor("#F5F0EA")
 ACCENT, PINK, GOLD, WHITE = HexColor("#7A233E"), HexColor("#D694A8"), HexColor("#B88A46"), HexColor("#FFFFFF")

@@ -10,9 +10,9 @@ from pathlib import Path
 import requests
 
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
-RAW = ROOT / "raw"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA = PROJECT_ROOT / "data"
+RAW = DATA / "raw"
 RETRIEVED_AT = "2026-08-14T00:00:00+08:00"
 WINDOW_START = "2026-05-16"
 SESSION = requests.Session()

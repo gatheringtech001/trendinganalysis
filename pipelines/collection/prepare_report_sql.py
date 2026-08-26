@@ -8,9 +8,9 @@ import sqlite3
 from pathlib import Path
 
 
-BASE = Path(__file__).resolve().parents[1]
+BASE = Path(__file__).resolve().parents[2]
 DATA = BASE / "data"
-ANALYSIS = BASE / "analysis"
+ANALYSIS = BASE / "output" / "analysis"
 STORES = ["princess_polly", "motel", "prettylittlething"]
 
 
@@ -138,7 +138,7 @@ def main() -> None:
         connection.executemany("INSERT INTO coverage VALUES(?,?,?,?,?)", ((store, *row) for row in coverage))
     output = {}
     for store in STORES:
-        directory = BASE / "reports" / store / "queries"
+        directory = BASE / "output" / "reports" / store / "queries"
         directory.mkdir(parents=True, exist_ok=True)
         sql = query_text(store)
         (directory / "report_queries.sql").write_text(sql, encoding="utf-8")

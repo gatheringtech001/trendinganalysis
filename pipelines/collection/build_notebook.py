@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 
 
-BASE = Path(__file__).resolve().parents[1]
-OUTPUT = BASE / "analysis" / "first_loop_analysis.ipynb"
+BASE = Path(__file__).resolve().parents[2]
+OUTPUT = BASE / "output" / "analysis" / "first_loop_analysis.ipynb"
 
 
 def markdown(text: str) -> dict:
@@ -44,14 +44,15 @@ def execute(cells: list[dict]) -> None:
 
 
 def main() -> None:
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     cells = [
         markdown("# 第一闭环：三家店铺外部自我画像研究\n\n**快照日：2026-08-14｜市场：美国｜近期窗口：2026-05-16 至 2026-08-14**"),
         markdown("## tl;dr\n\n本Notebook复算三家店铺的目录、150款分层样本、评论/UGC覆盖和QA。三店分别成像，不做横向排名；销量仅使用公开代理指标。"),
         code("""import json
 from pathlib import Path
-BASE = Path.cwd() / 'research' / '2026-08-14'
-analysis = json.loads((BASE / 'analysis' / 'analysis_summary.json').read_text(encoding='utf-8'))
-qa = json.loads((BASE / 'analysis' / 'qa_results.json').read_text(encoding='utf-8'))
+BASE = Path.cwd()
+analysis = json.loads((BASE / 'output' / 'analysis' / 'analysis_summary.json').read_text(encoding='utf-8'))
+qa = json.loads((BASE / 'output' / 'analysis' / 'qa_results.json').read_text(encoding='utf-8'))
 for key, row in analysis.items():
     c, r, u = row['catalog'], row['reviews'], row['ugc']
     print(f\"{row['store_name']}: catalog={c['row_count']:,}, sample=150, reviews={r['count']}, UGC={u['count']}\")

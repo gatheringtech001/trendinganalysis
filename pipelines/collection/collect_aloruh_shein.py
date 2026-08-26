@@ -15,8 +15,8 @@ from aloruh_shein_parser import is_challenge_url, normalize_browser_export, norm
 BASE_URL = "https://sg.shein.com"
 BRAND_URL = f"{BASE_URL}/Brands/Aloruh-sc-0141812390.html"
 CARD_SELECTOR = '.product-list[code="goodsList"] .product-card[data-expose-id]'
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT = ROOT.parent / "2026-08-18" / "data"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUTPUT = PROJECT_ROOT / "data"
 DEFAULT_DETAIL_LIMIT = 24
 DEFAULT_DELAY_MS = 1_200
 NAV_TIMEOUT_MS = 60_000

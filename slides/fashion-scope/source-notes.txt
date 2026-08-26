@@ -1,24 +1,24 @@
 Fashion Scope slides source inventory
 
 Repository evidence
-- research/2026-08-14/scripts/collect_catalogs.py
-- research/2026-08-18/scripts/prepare_aloruh_shein_for_explorer.py
-- research/2026-08-18/scripts/import_aloruh_customer.py
-- research/2026-08-14/explorer/database_builder.py
-- research/2026-08-14/explorer/data_store.py
-- research/2026-08-14/explorer/server.py
-- research/2026-08-14/explorer/src/Reports.jsx
-- research/2026-08-18/scripts/report_analysis_runner.py
-- research/2026-08-18/scripts/report_analysis_model.py
-- research/2026-08-18/scripts/azure_openai_fashion_analyzer.py
-- research/2026-08-18/scripts/fashion_image_analysis.py
-- research/2026-08-18/scripts/detailed_visual_analysis.py
-- research/2026-08-18/scripts/high_resolution_images.py
-- research/2026-08-18/data/aloruh_shein_browser_export.json
-- research/2026-08-18/data/aloruh_shein_browser_export.recollect.partial.json
-- research/2026-08-14/explorer/report_pdf.py
-- research/2026-08-14/explorer/report_pdf_pages.py
-- research/2026-08-14/explorer/deploy_kevindigital.sh
+- pipelines/collection/collect_catalogs.py
+- pipelines/analysis/prepare_aloruh_shein_for_explorer.py
+- pipelines/analysis/import_aloruh_customer.py
+- app/database_builder.py
+- app/data_store.py
+- app/server.py
+- app/src/Reports.jsx
+- pipelines/analysis/report_analysis_runner.py
+- pipelines/analysis/report_analysis_model.py
+- pipelines/analysis/azure_openai_fashion_analyzer.py
+- pipelines/analysis/fashion_image_analysis.py
+- pipelines/analysis/detailed_visual_analysis.py
+- pipelines/analysis/high_resolution_images.py
+- data/aloruh_shein_browser_export.json
+- data/aloruh_shein_browser_export.recollect.partial.json
+- app/report_pdf.py
+- app/report_pdf_pages.py
+- app/deploy_kevindigital.sh
 
 Production evidence
 - https://regardsjob.eastasia.cloudapp.azure.com/fashion-scope/
@@ -28,8 +28,8 @@ Production evidence
 - Screenshots: assets/experience1-step6-analysis-running.png and assets/experience1-step7-analysis-result.png.
 
 Report evidence
-- tmp/pdfs/production-semantic-22a1362.pdf
-- tmp/pdfs/semantic-pages-22a1362/page-*.jpg
+- output/pdf/Aloruh纯视觉诊断-图片结论版.pdf
+- slides/fashion-scope/assets/page-*.jpg
 
 Current verified values used in the deck
 - Website overview: 60,260 SKUs; 288,831 image index rows; 25,916 analyzed images.

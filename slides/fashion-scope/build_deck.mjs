@@ -205,7 +205,7 @@ async function addDemoSlide(options) {
       { fontSize: 16, color: INK }, `demo-detail-${index}`);
   });
   addFooter(s, "Fashion Scope · production screenshot walkthrough · 2026-08-26");
-  addNotes(s, [sources.production, `tmp/slides-fashion-scope-20260825/assets/${imageName}`]);
+  addNotes(s, [sources.production, `slides/fashion-scope/assets/${imageName}`]);
 }
 
 const p = Presentation.create({ slideSize: { width: W, height: H } });
@@ -231,7 +231,7 @@ const p = Presentation.create({ slideSize: { width: W, height: H } });
   addBox(s, { left: 586, top: 96, width: 646, height: 548 }, "#1E1E1E", "none", 8);
   await addImage(s, "page-53.jpg", { left: 606, top: 118, width: 606, height: 503 },
     { alt: "Final visual diagnosis recommendation page", fit: "contain" });
-  addNotes(s, [`${sources.repo}/tmp/pdfs/semantic-pages-22a1362/page-53.jpg`]);
+  addNotes(s, [`${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
 }
 
 let pageNumber = 2;
@@ -269,9 +269,9 @@ let pageNumber = 2;
     { left: 72, top: 596, width: 1110, height: 28 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-14/explorer/server.py`,
-    `${sources.repo}/research/2026-08-14/explorer/database_builder.py`,
-    `${sources.repo}/research/2026-08-14/explorer/deploy_kevindigital.sh`,
+    `${sources.repo}/app/server.py`,
+    `${sources.repo}/app/database_builder.py`,
+    `${sources.repo}/app/deploy_kevindigital.sh`,
   ]);
 }
 
@@ -316,9 +316,9 @@ let pageNumber = 2;
   });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-14/scripts/collect_catalogs.py`,
-    `${sources.repo}/research/2026-08-14/explorer/database_builder.py`,
-    `${sources.repo}/research/2026-08-18/scripts/prepare_aloruh_shein_for_explorer.py`,
+    `${sources.repo}/pipelines/collection/collect_catalogs.py`,
+    `${sources.repo}/app/database_builder.py`,
+    `${sources.repo}/pipelines/analysis/prepare_aloruh_shein_for_explorer.py`,
   ]);
 }
 
@@ -390,8 +390,8 @@ let pageNumber = 2;
     { left: 48, top: 646, width: 1166, height: 28 }, { fontSize: 13, color: MUTED }, "inventory-method-note");
   addFooter(s, "Fashion Scope · explorer.db live inventory · 2026-08-26");
   addNotes(s, [
-    `${sources.repo}/research/2026-08-14/explorer/explorer.db`,
-    `${sources.repo}/research/2026-08-14/explorer/database_builder.py`,
+    `${sources.repo}/app/explorer.db`,
+    `${sources.repo}/app/database_builder.py`,
     "Live SQLite aggregate query executed 2026-08-26: products, per-store distinct source_url, analyzed images, and analysis tags.",
   ]);
 }
@@ -436,9 +436,9 @@ let pageNumber = 2;
     { left: 190, top: 576, width: 1000, height: 46 }, { fontSize: 17, color: WHITE });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/data/aloruh_shein_browser_export.json`,
-    `${sources.repo}/research/2026-08-18/data/aloruh_shein_browser_export.recollect.partial.json`,
-    `${sources.repo}/research/2026-08-18/scripts/prepare_aloruh_shein_for_explorer.py`,
+    `${sources.repo}/data/aloruh_shein_browser_export.json`,
+    `${sources.repo}/data/aloruh_shein_browser_export.recollect.partial.json`,
+    `${sources.repo}/pipelines/analysis/prepare_aloruh_shein_for_explorer.py`,
     "User-confirmed Browser Use login and captcha workflow in current conversation, 2026-08-26",
   ]);
 }
@@ -471,10 +471,10 @@ let pageNumber = 2;
     { left: 72, top: 588, width: 1056, height: 42 }, { fontSize: 18, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-14/scripts/collect_catalogs.py`,
-    `${sources.repo}/research/2026-08-14/explorer/database_builder.py`,
-    `${sources.repo}/research/2026-08-18/scripts/high_resolution_images.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
+    `${sources.repo}/pipelines/collection/collect_catalogs.py`,
+    `${sources.repo}/app/database_builder.py`,
+    `${sources.repo}/pipelines/analysis/high_resolution_images.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
   ]);
 }
 
@@ -513,9 +513,9 @@ let pageNumber = 2;
     { left: 72, top: 616, width: 1094, height: 26 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`,
-    `${sources.repo}/research/2026-08-14/explorer/src/imageAnalysis.js`,
-    `${sources.repo}/research/2026-08-14/explorer/database_builder.py`,
+    `${sources.repo}/pipelines/analysis/fashion_image_analysis.py`,
+    `${sources.repo}/app/src/imageAnalysis.js`,
+    `${sources.repo}/app/database_builder.py`,
   ]);
 }
 
@@ -544,7 +544,7 @@ let pageNumber = 2;
     left: 660, top: 158 + i * 124, width: 554, index: row[0], title: row[1], tags: row[2], note: row[3],
   }));
   addFooter(s);
-  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`]);
+  addNotes(s, [`${sources.repo}/pipelines/analysis/fashion_image_analysis.py`]);
 }
 
 // Dimension examples 9–15 and label rules.
@@ -577,8 +577,8 @@ let pageNumber = 2;
     { left: 682, top: 588, width: 510, height: 48 }, { fontSize: 16, color: WHITE });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`,
-    `${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`,
+    `${sources.repo}/pipelines/analysis/fashion_image_analysis.py`,
+    `${sources.repo}/pipelines/analysis/azure_openai_fashion_analyzer.py`,
   ]);
 }
 
@@ -631,10 +631,10 @@ let pageNumber = 2;
     { left: 72, top: 622, width: 1104, height: 24 }, { fontSize: 17, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/analyze_explorer_images.py`,
-    `${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`,
-    `${sources.repo}/research/2026-08-18/scripts/detailed_visual_analysis.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
+    `${sources.repo}/pipelines/analysis/analyze_explorer_images.py`,
+    `${sources.repo}/pipelines/analysis/azure_openai_fashion_analyzer.py`,
+    `${sources.repo}/pipelines/analysis/detailed_visual_analysis.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
   ]);
 }
 
@@ -676,8 +676,8 @@ let pageNumber = 2;
     { left: 72, top: 642, width: 1112, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`,
-    `${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`,
+    `${sources.repo}/pipelines/analysis/azure_openai_fashion_analyzer.py`,
+    `${sources.repo}/pipelines/analysis/fashion_image_analysis.py`,
   ]);
 }
 
@@ -712,9 +712,9 @@ let pageNumber = 2;
     { left: 72, top: 606, width: 1112, height: 30 }, { fontSize: 19, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/detailed_visual_analysis.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
+    `${sources.repo}/pipelines/analysis/detailed_visual_analysis.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
   ]);
 }
 
@@ -751,8 +751,8 @@ let pageNumber = 2;
   addFooter(s);
   addNotes(s, [
     sources.production,
-    `${sources.repo}/research/2026-08-14/explorer/src/ImageDimensions.jsx`,
-    `${sources.repo}/research/2026-08-18/scripts/analyze_dimension_selection.py`,
+    `${sources.repo}/app/src/ImageDimensions.jsx`,
+    `${sources.repo}/pipelines/analysis/analyze_dimension_selection.py`,
   ]);
 }
 
@@ -797,8 +797,8 @@ let pageNumber = 2;
     { left: 72, top: 627, width: 1112, height: 20 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/analyze_dimension_selection.py`,
-    `${sources.repo}/research/2026-08-18/scripts/detailed_visual_analysis.py`,
+    `${sources.repo}/pipelines/analysis/analyze_dimension_selection.py`,
+    `${sources.repo}/pipelines/analysis/detailed_visual_analysis.py`,
   ]);
 }
 
@@ -900,8 +900,8 @@ for (const demo of experience1Demos) {
     { left: 70, top: 634, width: 1116, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
   ]);
 }
 
@@ -946,8 +946,8 @@ for (const demo of experience1Demos) {
     { left: 72, top: 639, width: 1112, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
   ]);
 }
 
@@ -985,8 +985,8 @@ for (const demo of experience1Demos) {
     { left: 72, top: 641, width: 1112, height: 18 }, { fontSize: 16, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
   ]);
 }
 
@@ -1027,9 +1027,9 @@ for (const demo of experience1Demos) {
 
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
-    `${sources.repo}/research/2026-08-14/explorer/src/Reports.jsx`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
+    `${sources.repo}/app/src/Reports.jsx`,
   ]);
 }
 
@@ -1098,7 +1098,7 @@ for (const demo of experience2Demos) {
   addText(s, "范围与分母清楚 · 图片角色清楚 · 店铺归属清楚 · 结论能够回查到 image_id",
     { left: 280, top: 578, width: 890, height: 30 }, { fontSize: 17, color: MUTED });
   addFooter(s);
-  addNotes(s, [`${sources.repo}/research/2026-08-14/explorer/report_pdf_pages.py`, `${sources.repo}/tmp/pdfs/production-semantic-22a1362.pdf`]);
+  addNotes(s, [`${sources.repo}/app/report_pdf_pages.py`, `${sources.repo}/output/pdf/Aloruh纯视觉诊断-图片结论版.pdf`]);
 }
 
 // Finished artifact showcase.
@@ -1117,7 +1117,7 @@ for (const demo of experience2Demos) {
   addText(s, "Aloruh纯视觉诊断－图片结论版.pdf", { left: 620, top: 588, width: 580, height: 32 },
     { fontSize: 18, bold: true });
   addFooter(s, "Fashion Scope · final report rendered and visually checked page by page");
-  addNotes(s, [`${sources.repo}/tmp/pdfs/production-semantic-22a1362.pdf`, `${sources.repo}/tmp/pdfs/semantic-pages-22a1362/`]);
+  addNotes(s, [`${sources.repo}/output/pdf/Aloruh纯视觉诊断-图片结论版.pdf`, `${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
 }
 
 // Appendix A1: complete Terra prompt, general rules and dimensions 1–3.
@@ -1141,8 +1141,8 @@ for (const demo of experience2Demos) {
   ]);
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`,
-    `${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`,
+    `${sources.repo}/pipelines/analysis/azure_openai_fashion_analyzer.py`,
+    `${sources.repo}/pipelines/analysis/fashion_image_analysis.py`,
   ]);
 }
 
@@ -1164,7 +1164,7 @@ for (const demo of experience2Demos) {
     "scene: STUDIO_NEUTRAL, HOME, MIRROR, BEDROOM, GARDEN, STREET, BEACH, POOL, PARTY, NIGHT, ARCHITECTURE, NATURE, OTHER, UNKNOWN",
   ], true);
   addFooter(s);
-  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`]);
+  addNotes(s, [`${sources.repo}/pipelines/analysis/fashion_image_analysis.py`]);
 }
 
 // Appendix A3: complete Terra prompt, dimensions 9–12.
@@ -1183,7 +1183,7 @@ for (const demo of experience2Demos) {
     "styling: SINGLE_ITEM, FULL_LOOK, LAYERED, ACCESSORIES_VISIBLE, HANDBAG, SHOES_VISIBLE, JEWELRY, MATCHING_SET, SWIM_COVERUP, UNKNOWN",
   ], true);
   addFooter(s);
-  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`]);
+  addNotes(s, [`${sources.repo}/pipelines/analysis/fashion_image_analysis.py`]);
 }
 
 // Appendix A4: complete Terra prompt, dimensions 13–15 and request wrapper.
@@ -1211,8 +1211,8 @@ for (const demo of experience2Demos) {
   ]);
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/azure_openai_fashion_analyzer.py`,
-    `${sources.repo}/research/2026-08-18/scripts/fashion_image_analysis.py`,
+    `${sources.repo}/pipelines/analysis/azure_openai_fashion_analyzer.py`,
+    `${sources.repo}/pipelines/analysis/fashion_image_analysis.py`,
   ]);
 }
 
@@ -1233,7 +1233,7 @@ for (const demo of experience2Demos) {
     "IMAGE {index}; store={store_id}; product={product_id}; title={title}; category={category}; pixels={width}x{height} ＋ input_image(detail=high)",
   ]);
   addFooter(s);
-  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/detailed_visual_analysis.py`]);
+  addNotes(s, [`${sources.repo}/pipelines/analysis/detailed_visual_analysis.py`]);
 }
 
 // Appendix A6: complete Experience 2 per-image Sol prompt.
@@ -1254,7 +1254,7 @@ for (const demo of experience2Demos) {
     "严格Schema要求每张图返回10项observable、visual_role、strengths、weaknesses、evidence_cues、confidence。",
   ]);
   addFooter(s);
-  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`]);
+  addNotes(s, [`${sources.repo}/pipelines/analysis/report_analysis_model.py`]);
 }
 
 // Appendix A7: complete Experience 2 synthesis prompt.
@@ -1275,7 +1275,7 @@ for (const demo of experience2Demos) {
     "EVIDENCE:{complete evidence JSON}",
   ], true);
   addFooter(s);
-  addNotes(s, [`${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`]);
+  addNotes(s, [`${sources.repo}/pipelines/analysis/report_analysis_model.py`]);
 }
 
 // Appendix A8: complete section revision prompt.
@@ -1298,8 +1298,8 @@ for (const demo of experience2Demos) {
     { left: 72, top: 588, width: 1112, height: 34 }, { fontSize: 17, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_model.py`,
-    `${sources.repo}/research/2026-08-18/scripts/report_analysis_runner.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
   ]);
 }
 
