@@ -45,7 +45,10 @@ Current verified values used in the deck
 - Standardized image schema: 15 dimensions from fashion-image-v2 — product category, silhouette/fit, design elements, occasion, composition, view/action, selling points, scene, material/texture, color/pattern, visual language, styling, lighting, model state, and graphic overlay.
 - Completed Aloruh SHEIN browser export: 26/26 catalog pages, 3,006 raw cards, 150/150 detailed products; export metadata states that cookies, tokens, headers, credentials, and risk parameters are excluded.
 - Terra classifier: gpt-5.6-terra through /openai/v1/responses, low-detail image inputs, strict 15-dimension JSON schema, default batch size 8 and workers 8 in analyze_explorer_images.py.
+- Terra prompt boundary: azure_openai_fashion_analyzer.py sends one taxonomy prompt per image batch and requires all 15 dimensions in one strict response; the 15 dimensions are output fields, not 15 independent prompts or model calls.
 - Sol detailed analysis: gpt-5.6-sol through /openai/v1/responses, high-detail validated HD files, visible-cue evidence requirements, strict image/store/section schemas.
 - Shared HD cache boundary: report_analysis_runner.py supplies a shared _image_cache to high_resolution_images.py; analyze_dimension_selection.py currently does not supply that cache directory, so the deck describes shared reuse only for the overall report path.
+- Experience 1 conclusion boundary: Sol returns per-image observations and cross-store summaries in the same structured response; comparisons apply only to the selected image set and do not use full-store distribution denominators.
+- Experience 2 conclusion boundary: competitor frequency claims use the 15,107-image full tag distributions; 106 HD competitor evidence images are used for visual verification, then Sol synthesizes five sections and programmatic validators enforce known image IDs and brand-matched evidence.
 - Report scope: 386 target images; 15,107 competitor population; 106 competitor HD evidence; 492 analyzed images.
 - Final report: 5 sections; 53 pages; PDF layout uses 0 model tokens.
