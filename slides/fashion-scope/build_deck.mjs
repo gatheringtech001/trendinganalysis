@@ -6,8 +6,8 @@ import { Presentation, PresentationFile } from "@oai/artifact-tool";
 const TMP = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(TMP, "..", "..");
 const ASSETS = path.join(TMP, "assets");
-const RENDERS = path.join(TMP, "renders-v11");
-const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260827-v11-final.pptx");
+const RENDERS = path.join(TMP, "renders-v12");
+const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260827-v12-final.pptx");
 
 const W = 1280;
 const H = 720;
@@ -1065,7 +1065,7 @@ for (const demo of experience2Demos) {
   const s = p.slides.add();
   s.background.fill = WHITE;
   addHeader(s, "内容驱动成品由五个 Section 逐层收敛到行动方案", "PDF structure", pageNumber++,
-    "章节和页数由实际可用的结论、证据、竞品与重点品类决定，不固定为某个页数。");
+    "当前完整任务映射为53页；缺少章节、结论、竞品或重点品类时才会缩短，不应把53页理解为53个结论。");
   const items = [
     ["page-04.jpg", "品牌视觉定位校准", "P2–6", "店铺规模、重点品类与风格是什么？"],
     ["page-14.jpg", "商品展示分析", "P7–14", "三类主分析＋六类交叉验证怎样展示商品？"],
@@ -1101,13 +1101,132 @@ for (const demo of experience2Demos) {
   await addImage(s, "page-09.jpg", { left: 48, top: 156, width: 212, height: 119 }, { alt: "Tops visual analysis example" });
   await addImage(s, "page-28.jpg", { left: 276, top: 156, width: 212, height: 119 }, { alt: "Competitor visual system example" });
   await addImage(s, "page-51.jpg", { left: 48, top: 295, width: 440, height: 247 }, { alt: "Final reference board example" });
-  metric(s, "动态", "页数按内容", 48, 574, 160, true);
+  metric(s, "53", "当前成品页数", 48, 574, 160, true);
   metric(s, "5", "个可审核 Section", 230, 574, 200);
   addText(s, "成品文件", { left: 500, top: 594, width: 120, height: 22 }, { fontSize: 16, bold: true, color: MUTED });
   addText(s, "Aloruh店铺视觉诊断－内容驱动版－20260827.pdf", { left: 620, top: 588, width: 580, height: 32 },
     { fontSize: 18, bold: true });
   addFooter(s, "Fashion Scope · final report rendered and visually checked page by page");
   addNotes(s, [`${sources.repo}/output/pdf/Aloruh店铺视觉诊断-内容驱动版-20260827.pdf`, `${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
+}
+
+// Reading guide 1: page roles.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "53页不是53个结论：先识别页面角色，再判断内容", "How to read the PDF · 1/3", pageNumber++,
+    "五章共25条核心claim；其余页面负责建立范围、展开证据、显示边界或转化为执行方案。");
+  const roles = [
+    ["01", "章节页", "P2 / 7 / 15 / 26 / 40", "只负责切换问题，不产生新结论"],
+    ["02", "事实页", "P3–5", "目录规模与品类占比来自全量数据"],
+    ["03", "结论页", "如P8 / 28 / 35 / 41", "必须能回指推导、分母与观察字段"],
+    ["04", "证据与边界页", "如P17 / 29–38 / 50–51", "图片说明claim，不等于新的统计结论"],
+    ["05", "建议与方案页", "P39 / 43–49 / 52–53", "把已验证问题转成图序与拍摄规则"],
+  ];
+  roles.forEach((row, index) => {
+    const x = 48 + index * 238;
+    addText(s, row[0], { left: x, top: 176, width: 54, height: 28 },
+      { fontSize: 17, typeface: FONT_LATIN, bold: true, color: BLUE }, `role-index-${index}`);
+    addRule(s, x, 218, 214, index === 2 ? BLUE : RULE, index === 2 ? 3 : 1);
+    addText(s, row[1], { left: x, top: 246, width: 214, height: 46 },
+      { fontSize: 25, bold: true }, `role-title-${index}`);
+    addText(s, row[2], { left: x, top: 318, width: 214, height: 44 },
+      { fontSize: 16, typeface: FONT_LATIN, bold: true, color: BLUE }, `role-pages-${index}`);
+    addText(s, row[3], { left: x, top: 386, width: 214, height: 92 },
+      { fontSize: 17, color: MUTED }, `role-detail-${index}`);
+  });
+  addBox(s, { left: 48, top: 548, width: 1152, height: 90 }, BLACK, "none", 8, "reading-rule");
+  addText(s, "阅读顺序", { left: 72, top: 574, width: 120, height: 28 }, { fontSize: 18, bold: true, color: WHITE });
+  addText(s, "先读结论和分母 → 再看支持图 → 再看反例边界 → 最后判断建议是否真的由前文推出",
+    { left: 210, top: 572, width: 950, height: 34 }, { fontSize: 20, bold: true, color: WHITE });
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/app/report_pdf_pages.py`,
+    `${sources.repo}/.tmp/whitepaper-20260827a-job.json`,
+    "Production UI generated PDF, 2026-08-27",
+  ]);
+}
+
+// Reading guide 2: section dependency chain.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "五个Section不是并列目录，而是一条从事实到行动的证据链", "How to read the PDF · 2/3", pageNumber++,
+    "前四章分别回答定位、商品、店铺与竞品问题；第五章只能综合前四章，不新增图片观察。");
+  const sections = [
+    ["S1", "品牌定位", "P2–6", "卖什么？\n已有何种视觉代码？"],
+    ["S2", "商品展示", "P7–14", "卖点是否被看清？\n多视角是否互补？"],
+    ["S3", "店铺审计", "P15–25", "背景、光线、图文\n是否形成一致系统？"],
+    ["S4", "竞品差距", "P26–39", "同品类比较中\n差的是哪套规则？"],
+    ["S5", "升级方向", "P40–53", "哪些规则应固化？\n图序怎样落地？"],
+  ];
+  sections.forEach((row, index) => {
+    const x = 48 + index * 238;
+    addBox(s, { left: x, top: 180, width: 214, height: 270 }, index === 4 ? BLACK : PANEL, "none", 8, `section-${index}`);
+    addText(s, row[0], { left: x + 18, top: 200, width: 48, height: 24 },
+      { fontSize: 15, typeface: FONT_LATIN, bold: true, color: index === 4 ? "#8FD4F2" : BLUE }, `section-index-${index}`);
+    addText(s, row[1], { left: x + 18, top: 244, width: 178, height: 42 },
+      { fontSize: 23, bold: true, color: index === 4 ? WHITE : INK }, `section-title-${index}`);
+    addText(s, row[2], { left: x + 18, top: 302, width: 178, height: 28 },
+      { fontSize: 15, typeface: FONT_LATIN, bold: true, color: index === 4 ? "#8FD4F2" : BLUE }, `section-pages-${index}`);
+    addText(s, row[3], { left: x + 18, top: 348, width: 178, height: 76 },
+      { fontSize: 16, color: index === 4 ? "#D7D7D7" : MUTED }, `section-question-${index}`);
+    if (index < sections.length - 1) {
+      addText(s, "→", { left: x + 210, top: 282, width: 28, height: 36 },
+        { fontSize: 25, typeface: FONT_LATIN, bold: true, color: BLUE, alignment: "center" }, `section-arrow-${index}`);
+    }
+  });
+  const metrics = [
+    ["2,848", "全量目录商品"], ["159", "目标店高清图"], ["15,107", "竞品标签分母"], ["190", "竞品高清复核图"], ["349", "Sol逐图观察"],
+  ];
+  metrics.forEach((row, index) => {
+    const x = 48 + index * 238;
+    addText(s, row[0], { left: x, top: 510, width: 214, height: 46 },
+      { fontSize: 31, typeface: FONT_LATIN, bold: true, color: index === 4 ? BLUE : INK }, `chain-metric-${index}`);
+    addText(s, row[1], { left: x, top: 562, width: 214, height: 30 },
+      { fontSize: 15, color: MUTED }, `chain-label-${index}`);
+  });
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
+    `${sources.repo}/.tmp/whitepaper-20260827a-job.json`,
+  ]);
+}
+
+// Reading guide 3: verified mapping issues.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "当前报告的主要阅读风险集中在12页，不能按标题直接下结论", "How to read the PDF · 3/3", pageNumber++,
+    "以下问题来自生产界面重新生成的53页PDF与页面配置、真实claim及嵌入图片的逐页对照。");
+  const risks = [
+    ["P5 / P9–11", "样本单位写错", "实际是每类随机20个商品，并非20张图；成功读取分别为39、36、34张。"],
+    ["P20 / P22 / P24", "标题与claim错位", "文字模板页绑定光线claim；首图类型页绑定场景claim；模特画像页未绑定模特claim。"],
+    ["P43 / P47", "口号超过证据", "“追趋势”和趋势转译流程并非其绑定claim直接推导，应按策略建议阅读。"],
+    ["P48 / P49 / P53", "对比语义不成立", "不是同款改造前后；PLAN B实际仍偏棚拍，品牌氛围层证据不足。"],
+  ];
+  risks.forEach((row, index) => {
+    const y = 170 + index * 106;
+    addText(s, row[0], { left: 48, top: y + 4, width: 178, height: 30 },
+      { fontSize: 18, typeface: FONT_LATIN, bold: true, color: BLUE }, `risk-pages-${index}`);
+    addText(s, row[1], { left: 238, top: y, width: 240, height: 34 },
+      { fontSize: 22, bold: true }, `risk-title-${index}`);
+    addText(s, row[2], { left: 500, top: y, width: 700, height: 62 },
+      { fontSize: 17, color: MUTED }, `risk-detail-${index}`);
+    addRule(s, 48, y + 78, 1152, "#D7D9DD");
+  });
+  addBox(s, { left: 48, top: 594, width: 1152, height: 58 }, LIGHT_BLUE, "none", 8, "reuse-note");
+  addText(s, "图片复用审计", { left: 70, top: 613, width: 160, height: 24 }, { fontSize: 17, bold: true, color: BLUE });
+  addText(s, "187张唯一嵌入图中，52张跨页重复；最极端一张出现15页。重复不一定错误，但必须标明其证据角色。",
+    { left: 242, top: 611, width: 920, height: 28 }, { fontSize: 17, color: INK });
+  addFooter(s, "Fashion Scope · production UI PDF page-by-page QA · 2026-08-27");
+  addNotes(s, [
+    "Production UI: https://regardsjob.eastasia.cloudapp.azure.com/fashion-scope/#reports",
+    `${sources.repo}/app/report_pdf_pages.py`,
+    `${sources.repo}/.tmp/whitepaper-20260827a-job.json`,
+    "UI-generated PDF SHA-256 2A52904C5B182C608BD20DA08B238ABD2D145446B48D32F17CFA15001E3C6932",
+  ]);
 }
 
 // Appendix A1: complete Terra prompt, general rules and dimensions 1–3.

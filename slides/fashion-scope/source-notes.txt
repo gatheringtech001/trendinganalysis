@@ -30,6 +30,9 @@ Production evidence
 Report evidence
 - output/pdf/Aloruh店铺视觉诊断-内容驱动版-20260827.pdf
 - slides/fashion-scope/assets/page-*.jpg
+- Production UI regenerated the final PDF from analysis job whitepaper-20260827a on 2026-08-27. The UI-generated file has 53 pages and SHA-256 2A52904C5B182C608BD20DA08B238ABD2D145446B48D32F17CFA15001E3C6932.
+- Page-by-page QA found 25 analytical claims across five sections, plus divider, fact, evidence, boundary, recommendation, and plan pages. Twelve pages require interpretation cautions: P5, P9-11, P20, P22, P24, P43, P47-49, and P53.
+- Embedded-image reuse audit: 187 unique embedded images; 52 images recur across pages; the most repeated image appears on 15 pages. Reuse is not automatically incorrect, but the report currently does not label the role on every reused evidence page.
 
 Current verified values used in the deck
 - Website overview: 60,260 SKUs; 288,831 image index rows; 27,355 analyzed images; 650,411 analysis tags.
