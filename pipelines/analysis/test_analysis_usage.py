@@ -5,7 +5,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from analysis_usage import AnalysisUsageRecorder, TERRA_STANDARD_PRICING
+from analysis_usage import (
+    AnalysisUsageRecorder,
+    GPT41_STANDARD_PRICING,
+    TERRA_STANDARD_PRICING,
+    pricing_for_deployment,
+)
 
 
 SAMPLE_EVENT = {
@@ -26,6 +31,12 @@ SAMPLE_EVENT = {
 
 
 class AnalysisUsageRecorderTests(unittest.TestCase):
+    def test_selects_pricing_for_supported_deployments(self):
+        self.assertIs(TERRA_STANDARD_PRICING, pricing_for_deployment("gpt-5.6-terra"))
+        self.assertIs(GPT41_STANDARD_PRICING, pricing_for_deployment("gpt-4.1"))
+        with self.assertRaisesRegex(ValueError, "pricing is not configured"):
+            pricing_for_deployment("unknown-model")
+
     def test_records_usage_cost_and_completion_summary(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

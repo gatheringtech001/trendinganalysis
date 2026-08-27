@@ -131,10 +131,20 @@ class DeckBase:
                 ids.extend(claim_evidence["counterexample_image_ids"])
         return ids
 
-    def _semantic_text(self, image_id):
+    def _semantic_fields(self, image_id):
         observation = self.observations.get(image_id, {})
         observable = observation.get("observable", {})
-        values = [value for value in observable.values() if isinstance(value, str)]
+        return {
+            key: value for key, value in observable.items()
+            if isinstance(value, str) and value
+        }
+
+    def _semantic_text(self, image_id, fields=None):
+        observable = self._semantic_fields(image_id)
+        if fields:
+            return " ".join(observable.get(field, "") for field in fields).strip()
+        observation = self.observations.get(image_id, {})
+        values = list(observable.values())
         values.extend([
             observation.get("visual_role", ""),
             self.images[image_id].get("title", ""),
@@ -158,7 +168,7 @@ class DeckBase:
         required_tags = set(requirements.get("tags", []))
         if required_tags and not required_tags.intersection(self._image_tags(image_id)):
             return False
-        text = self._semantic_text(image_id)
+        text = self._semantic_text(image_id, requirements.get("semantic_fields"))
         if requirements.get("include_any") and not any(word in text for word in requirements["include_any"]):
             return False
         for group in requirements.get("include_groups", []):
@@ -225,6 +235,7 @@ class DeckBase:
             "store_id": image.get("store_id"),
             "category": image.get("category"),
             "semantic_text": self._semantic_text(image_id),
+            "semantic_fields": self._semantic_fields(image_id),
         })
 
     def _grid(self, ids, x, y, width, height, cols, gap=8, shade=0):

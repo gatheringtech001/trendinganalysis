@@ -22,33 +22,34 @@ Repository evidence
 
 Production evidence
 - https://regardsjob.eastasia.cloudapp.azure.com/fashion-scope/
-- Screenshots captured 2026-08-25 through Playwright; console errors=0, warnings=0.
+- Experience 2 screenshots refreshed from production task whitepaper-20260827a on 2026-08-27.
 - User-confirmed Aloruh SHEIN method, 2026-08-26: Browser Use with the user's personal login; the user manually completes CAPTCHA or verification steps; browser automation then collects brand catalog and required product-detail evidence.
 - Experience 1 paid analysis captured on production, 2026-08-26: one manual run for TOPS + VACATION using two selected Princess Polly images; job 38813f99a9e948cfa16f44258e72ff71 completed in 81.3 seconds with 2/2 images, 8,343 total tokens, and estimated cost $0.1897.
 - Screenshots: assets/experience1-step6-analysis-running.png and assets/experience1-step7-analysis-result.png.
 
 Report evidence
-- output/pdf/Aloruh纯视觉诊断-图片结论版.pdf
+- output/pdf/Aloruh店铺视觉诊断-白皮书覆盖版-20260827.pdf
 - slides/fashion-scope/assets/page-*.jpg
 
 Current verified values used in the deck
-- Website overview: 60,260 SKUs; 288,831 image index rows; 25,916 analyzed images.
-- Live explorer.db store inventory on 2026-08-26:
-  - Aloruh SHEIN: 2,848 products; 4,352 distinct in-store source URLs; 343 analyzed images.
+- Website overview: 60,260 SKUs; 288,831 image index rows; 27,355 analyzed images; 650,411 analysis tags.
+- Relabeled explorer.db store inventory on 2026-08-27:
+  - Aloruh SHEIN: 2,848 products; 4,352 distinct in-store source URLs; 1,782 analyzed position-1 images, all complete across 15 dimensions.
   - Aloruh local: 10,487 products; 10,771 distinct in-store source URLs; 10,466 analyzed images.
   - Princess Polly: 17,008 products; 119,205 distinct in-store source URLs; 5,613 analyzed images.
   - Motel Rocks: 4,422 products; 26,676 distinct in-store source URLs; 2,141 analyzed images.
   - PrettyLittleThing: 25,495 products; 127,827 distinct in-store source URLs; 7,353 analyzed images.
-  - Totals: 60,260 products; 288,831 in-store image-index rows; 288,513 globally distinct source URLs; 25,916 analyzed images; 606,007 analysis tags.
+  - Totals: 60,260 products; 288,831 in-store image-index rows; 288,513 globally distinct source URLs; 27,355 analyzed images; 650,411 analysis tags.
   - Image-index rows are URL records, not downloaded image files.
 - Dimension example: TOPS + VACATION => 3,179 matched images on 2026-08-25 production UI.
 - Standardized image schema: 15 dimensions from fashion-image-v2 — product category, silhouette/fit, design elements, occasion, composition, view/action, selling points, scene, material/texture, color/pattern, visual language, styling, lighting, model state, and graphic overlay.
 - Completed Aloruh SHEIN browser export: 26/26 catalog pages, 3,006 raw cards, 150/150 detailed products; export metadata states that cookies, tokens, headers, credentials, and risk parameters are excluded.
-- Terra classifier: gpt-5.6-terra through /openai/v1/responses, low-detail image inputs, strict 15-dimension JSON schema, default batch size 8 and workers 8 in analyze_explorer_images.py.
+- Terra classifier: gpt-5.6-terra through /openai/v1/responses, low-detail image inputs, strict 15-dimension JSON schema, default batch size 8 and workers 8 in analyze_explorer_images.py. The 2026-08-27 Aloruh run completed 1,782/1,782 position-1 images with zero missing dimensions.
 - Terra prompt boundary: azure_openai_fashion_analyzer.py sends one taxonomy prompt per image batch and requires all 15 dimensions in one strict response; the 15 dimensions are output fields, not 15 independent prompts or model calls.
 - Sol detailed analysis: gpt-5.6-sol through /openai/v1/responses, high-detail validated HD files, visible-cue evidence requirements, strict image/store/section schemas.
 - Shared HD cache boundary: report_analysis_runner.py supplies a shared _image_cache to high_resolution_images.py; analyze_dimension_selection.py currently does not supply that cache directory, so the deck describes shared reuse only for the overall report path.
 - Experience 1 conclusion boundary: Sol returns per-image observations and cross-store summaries in the same structured response; comparisons apply only to the selected image set and do not use full-store distribution denominators.
-- Experience 2 conclusion boundary: competitor frequency claims use the 15,107-image full tag distributions; 106 HD competitor evidence images are used for visual verification, then Sol synthesizes five sections and programmatic validators enforce known image IDs and brand-matched evidence.
-- Report scope: 386 target images; 15,107 competitor population; 106 competitor HD evidence; 492 analyzed images.
-- Final report: 5 sections; 53 pages; PDF layout uses 0 model tokens.
+- Experience 2 conclusion boundary: all 349 successful HD images are analyzed once. Each section then receives role-filtered observations with only its relevant fields; this is field projection, not a second sample. Five section calls are checkpointed independently, followed by one executive-summary call.
+- Report scope: 81 target products across 9 categories, 159 target images with up to two views per product, 15,107-image competitor 12-dimension population (TOPS and SKIRTS), 190 competitor HD evidence images, 349/349 analyzed images.
+- Report run: 349 cache hits, 0 network downloads, 50 model calls, 1,277,211 total tokens, estimated Sol cost $15.577616. The preceding Terra retag cost was about $9.43; combined estimated model cost was about $25.01.
+- Final report: 5 sections; 53 pages; PDF layout uses 0 model tokens. File SHA-256 f162dbfe17a3e5f4d594e19aa4dead5d8e40b484985516f4a4dc1eb89f7221db.

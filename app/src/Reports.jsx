@@ -119,7 +119,7 @@ function ReportAnalysisDraft({ job, onReview }) {
     </aside> : null}
     <section className="report-summary"><div><span>REPORT-SPECIFIC ANALYSIS</span>
       <h2>报告专项分析草稿</h2><p>这是为最终视觉诊断 PDF 重新执行的分析，不是旧维度聚合结果。</p></div>
-      <dl><div><dt>目标图片</dt><dd>{formatNumber(result.scope?.target_images)}</dd></div>
+      <dl><div><dt>目标商品 / 图片</dt><dd>{formatNumber(result.scope?.target_products)} / {formatNumber(result.scope?.target_images)}</dd></div>
         <div><dt>竞品12维可比分母</dt><dd>{result.scope?.competitor_population_images == null
           ? "旧版未记录" : formatNumber(result.scope.competitor_population_images)}</dd></div>
         <div><dt>竞品高清证据</dt><dd>{formatNumber(result.scope?.competitor_images)}</dd></div>
@@ -130,11 +130,14 @@ function ReportAnalysisDraft({ job, onReview }) {
           <div><dt>图片索引</dt><dd>{formatNumber(profile.image_count)}</dd></div>
           <div><dt>市场</dt><dd>{profile.market || "未记录"}</dd></div>
           <div><dt>数据更新时间</dt><dd>{profile.data_updated_at?.slice(0, 19) || "未记录"}</dd></div></dl></article>
-      <article><span>重点品类 · 全量排序后随机复核</span><h3>前 {keyAnalysis.key_categories?.length || 0} 个品类</h3>
-        <ol>{(keyAnalysis.key_categories || []).map((row) => <li key={row.category}>
+      <article><span>重点品类 · 全量排序后随机复核</span><h3>前三重点＋白皮书补充品类</h3>
+        <ol>{[
+          ...(keyAnalysis.key_categories || []),
+          ...(keyAnalysis.supplementary_categories || []),
+        ].map((row) => <li key={row.category}>
           <strong>{formatCategory(row.category)}</strong>
           <span>全量 {formatNumber(row.population_products)} 件</span>
-          <span>随机 {formatNumber(row.sample_selected)} 张 / 成功 {formatNumber(row.downloaded_images ?? row.sample_selected)} 张</span>
+          <span>随机 {formatNumber(row.sample_selected)} 个商品 / 成功读取 {formatNumber(row.downloaded_images ?? row.sample_selected)} 张图</span>
         </li>)}</ol>
         <small>复现种子：{keyAnalysis.sampling?.seed}</small></article>
       <article><span>图片与竞品证据</span><h3>缓存优先，不重复下载</h3>
@@ -172,18 +175,21 @@ function ReportAnalysisDraft({ job, onReview }) {
 }
 
 function StartAnalysis({ categories, disabled, onStart, summary }) {
+  const supplementary = "T恤 / 半裙 / 两件套 / 外套 / 西装 / 针织套装";
   return <section className="report-analysis-start">
     <span>ON-DEMAND REPORT ANALYSIS</span><h2>主动生成报告专项分析</h2>
-    <p>先用店铺全部商品计算品类结构，自动选择商品数最多的 3 个重点品类；每个品类再以任务 ID
-      作为随机种子抽取最多 20 个不同商品首图，用 GPT-5.6 Sol 逐图复核。三家竞品仍使用全部已采集
-      标签分布选择典型与有效边界证据。高清图片优先命中共享缓存，不重复下载。</p>
+    <p>先用店铺全部商品计算品类结构，前三大品类各抽20个商品，并从白皮书重点补充品类各抽5个；
+      每个商品最多读取2个视角，用 GPT-5.6 Sol 逐图复核。目标店首图使用完整15维标签；三家竞品仍使用已采集
+      12 维标签分布选择典型与有效边界证据；只有标签完整的品类进入竞品比较，未覆盖品类会明确标注不比较。
+      高清图片优先命中共享缓存，不重复下载。</p>
     <dl><div><dt>店铺全量</dt><dd>{formatNumber(summary?.metrics?.products)} 个商品 · {formatNumber(summary?.metrics?.images)} 条图片索引</dd></div>
       <div><dt>自动重点品类</dt><dd>{categories.length
         ? categories.map((row) => `${formatCategory(row.category)} ${formatNumber(row.products)}件`).join(" / ")
         : "正在读取…"}</dd></div>
-      <div><dt>目标抽样</dt><dd>前 3 个重点品类 · 每类最多随机 20 张 · 同一任务可复现</dd></div>
+      <div><dt>目标抽样</dt><dd>前三品类各20个＋补充品类各5个 · 每商品最多2视角</dd></div>
+      <div><dt>补充品类</dt><dd>{supplementary}</dd></div>
       <div><dt>成品结构</dt><dd>品牌定位 / 商品展示 / 店铺视觉 / 竞品差距 / 升级方向</dd></div>
-      <div><dt>竞品选图</dt><dd>Princess Polly / Motel Rocks / PrettyLittleThing · 全量 12 维标签分布 → 典型与有效边界证据</dd></div>
+      <div><dt>竞品选图</dt><dd>Princess Polly / Motel Rocks / PrettyLittleThing · 完整 12 维可比分母 → 典型与有效边界证据</dd></div>
       <div><dt>分析边界</dt><dd>覆盖可见模特特征；不做人群画像、代表红人或敏感属性推断</dd></div></dl>
     <button disabled={disabled} onClick={onStart} type="button">
       {disabled ? "报告专项分析运行中…" : "开始报告专项分析（会产生费用）"}</button>

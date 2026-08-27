@@ -47,15 +47,23 @@ class EditorialDeck(DeckBase):
 
     def _draw_category_overview(self, spec):
         self._header(spec)
-        rows = self._key_analysis().get("distribution", [])[:8]
+        analysis = self._key_analysis()
+        selected = analysis.get("key_categories", []) + analysis.get(
+            "supplementary_categories", [],
+        )
+        selected_names = [row["category"] for row in selected]
+        distribution = {
+            row["category"]: row for row in analysis.get("distribution", [])
+        }
+        rows = [distribution[name] for name in selected_names if name in distribution]
+        rows = rows or analysis.get("distribution", [])[:8]
         if not rows:
             raise ValueError("PDF缺少全量品类分布")
         maximum = max(row["products"] for row in rows)
-        key_names = {
-            row["category"] for row in self._key_analysis().get("key_categories", [])
-        }
+        key_names = set(selected_names)
+        step = min(96, 720 / max(len(rows), 1))
         for index, row in enumerate(rows):
-            y = 835 - index * 96
+            y = 835 - index * step
             self._text(row["category"], 70, y, 18, 300, INK, row["category"] in key_names)
             self.canvas.setFillColor(SAND if row["category"] in key_names else PAPER)
             self.canvas.roundRect(390, y - 4, 1120 * row["products"] / maximum, 30, 8, fill=1, stroke=0)
@@ -126,7 +134,11 @@ class EditorialDeck(DeckBase):
         self._grid(self._take(spec, 9), 790, 0, 1130, 1080, 3, 6, .25)
         self._text(spec["title"], 50, 990, 34, 660, WHITE, True, max_lines=4)
         self._text(self._body(spec), 50, 790, 19, 650, SAND, max_lines=7)
-        metrics = [(scope["target_images"], "ALORUH 重点品类随机样本"), (len(self.report["image_observations"]), "逐图观察"), (scope["competitor_population_images"], "竞品12维可比分母")]
+        metrics = [
+            (scope.get("target_products", scope["target_images"]), f"ALORUH 商品 / {scope['target_images']:,}张多视角"),
+            (len(self.report["image_observations"]), "逐图观察"),
+            (scope["competitor_population_images"], "竞品12维可比分母"),
+        ]
         for index, (value, label) in enumerate(metrics):
             y = 430 - index * 110
             self._text(f"{value:,}", 50, y, 42, 250, WHITE, True)
@@ -193,12 +205,20 @@ class EditorialDeck(DeckBase):
         near_category = "TOPS" if "TOPS" in categories else categories[0]
         full_candidates = [row for row in categories if row != near_category]
         full_category = "SKIRTS" if "SKIRTS" in full_candidates else full_candidates[0]
+        detail_candidates = [
+            row for row in categories if row not in {near_category, full_category}
+        ]
+        detail_category = detail_candidates[0] if detail_candidates else full_category
+        display_fields = [
+            "framing", "pose_action", "garment_display",
+            "design_details", "material_texture",
+        ]
         slots = [
-            ({**spec, "claim": 0}, {"scope": "store", "category": near_category, "include_any": ["近景", "近距离", "躯干", "上半身"]}, f"{near_category} 近景"),
-            ({**spec, "claim": 1}, {"scope": "store", "category": full_category, "include_groups": [["全长", "全身", "腰头"], ["下摆", "完整"]]}, f"{full_category} 全长"),
-            ({**spec, "claim": 2}, {"evidence": "support", "include_any": ["正面"]}, "正面"),
-            ({**spec, "claim": 2}, {"evidence": "counter", "include_any": ["背面", "背对", "背身"]}, "背面"),
-            ({**spec, "claim": 2}, {"evidence": "support", "include_any": ["局部", "近景", "特写", "近距离"]}, "局部"),
+            ({**spec, "claim": 0}, {"scope": "store", "category": near_category, "semantic_fields": display_fields, "include_any": ["近景", "近距离", "躯干", "上半身"]}, f"{near_category} 近景"),
+            ({**spec, "claim": 1}, {"scope": "store", "category": full_category, "semantic_fields": display_fields, "include_groups": [["全长", "全身", "腰头"], ["下摆", "完整"]]}, f"{full_category} 全长"),
+            ({**spec, "claim": 2}, {"scope": "store", "category": detail_category, "semantic_fields": ["pose_action", "framing", "garment_display"], "include_any": ["正面", "正向", "面向镜头", "正对镜头"], "exclude_any": ["背对镜头", "模特背对", "仅背面", "正面不可见", "未展示正面", "正面不清楚"]}, "正面"),
+            ({**spec, "claim": 2}, {"scope": "store", "category": detail_category, "semantic_fields": ["pose_action", "framing", "garment_display"], "include_any": ["背面", "背对", "后侧", "后背"], "exclude_any": ["背面不可见", "未展示背面", "背面不清楚", "无法核验背面", "不能核验背面", "后背不可见"]}, "背面"),
+            ({**spec, "claim": 2}, {"scope": "store", "category": detail_category, "semantic_fields": display_fields, "include_any": ["局部", "近景", "特写", "近距离"]}, "局部"),
         ]
         for index, (source, requirements, label) in enumerate(slots):
             image_id = self._take(source, 1, requirements)[0]
@@ -303,6 +323,30 @@ class EditorialDeck(DeckBase):
             body = self.sections["brand_positioning"]["summary"] if index == 0 else claims[index - 1]["conclusion"]
             self._text(body, x, 300, 14, 405, STONE, max_lines=7)
         self._photo(motel_pair[0], 1240, 430, 115, 150)
+        note = self._competitor_coverage_note()
+        if note:
+            self._text(note, 50, 105, 15, 1810, STONE, True, max_lines=2)
+
+    def _competitor_coverage_note(self):
+        categories = self.report.get("scope", {}).get("categories", [])
+        stores = self.report.get("competitor_evidence", {}).get("stores", {})
+        if not categories or not stores:
+            return ""
+        available = set(categories)
+        for plan in stores.values():
+            available &= {
+                category for category, row in plan.get("categories", {}).items()
+                if row.get("status") == "available"
+            }
+        comparable = [category for category in categories if category in available]
+        unavailable = [category for category in categories if category not in available]
+        parts = [
+            "三家竞品共同12维可比范围："
+            + (" / ".join(comparable) if comparable else "无共同覆盖品类"),
+        ]
+        if unavailable:
+            parts.append(f"{' / '.join(unavailable)} 尚无三家完整覆盖，不纳入竞品结论")
+        return "；".join(parts) + "。"
 
     def _draw_brand_feature(self, spec):
         ids = self._take(spec, 4)

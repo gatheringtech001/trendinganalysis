@@ -12,7 +12,7 @@ REFERENCE_SEQUENCE = [
     {"page": 11, "kind": "category_sample", "section": "product_display", "claim": 2, "category_index": 2, "title": "重点品类随机样本 03"},
     {"page": 12, "kind": "method", "section": "product_display", "title": "分析口径：不同画面回答不同问题"},
     {"page": 13, "kind": "feature", "section": "product_display", "claim": 1, "title": "重点提升款：商品有吸引力，首图信息仍不足"},
-    {"page": 14, "kind": "matrix", "section": "product_display", "claim": 2, "title": "每个品类固定 构图 - 动作 - 卖点 - 场景"},
+    {"page": 14, "kind": "matrix", "section": "product_display", "claim": 2, "title": "每个品类固定 构图 - 动作 - 产品卖点 - 场景"},
     {"page": 15, "kind": "divider", "section": "store_visual_audit", "title": "STORE VISUAL AUDIT"},
     {"page": 16, "kind": "logic", "section": "store_visual_audit", "claim": 0, "title": "Store Display Logic"},
     {"page": 17, "kind": "mosaic", "section": "store_visual_audit", "claim": 0, "title": "摄影视觉风格", "subtitle": "场景层级尚未统一"},

@@ -18,7 +18,7 @@ from visual_reports import FINAL_REPORT_NAME, PDF_NAME, REPORT_ID, SOURCE_NOTES_
 
 
 REFERENCE_SHA256 = "33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253"
-LAYOUT_VERSION = "reference-53-page-v2"
+LAYOUT_VERSION = "reference-53-page-v3"
 
 
 def _shared_cached_image(image, shared_cache_dir):
@@ -110,6 +110,7 @@ def _final_payload(report, generated, pages):
         "sections": report["sections"],
         "images": report["images"],
         "image_observations": report.get("image_observations", []),
+        "competitor_evidence": report.get("competitor_evidence", {}),
         "approved_analysis": report["approved_analysis"],
     }
 

@@ -5,11 +5,13 @@ import json
 import os
 import random
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from types import SimpleNamespace
 
-from analysis_usage import AnalysisUsageRecorder, SOL_STANDARD_PRICING
+from analysis_usage import AnalysisUsageRecorder, pricing_for_deployment
 from azure_openai_fashion_analyzer import AzureOpenAIOptions
+from fashion_image_analysis import DIMENSIONS
 from high_resolution_images import download_high_resolution_image
 from report_analysis_model import AzureOpenAIReportAnalyzer, OBSERVABLE_FIELDS, SECTION_IDS
 
@@ -21,11 +23,18 @@ COMPETITOR_BRANDS = {
     "prettylittlething": "PrettyLittleThing",
 }
 BATCH_SIZE = 8
+REPORT_ANALYSIS_WORKERS = 4
 SELECTION_DIMENSIONS = (
     "product_category", "silhouette_fit", "design_elements", "material_texture",
     "occasion", "color_pattern", "composition", "view_action", "selling_points",
     "scene", "visual_language", "styling",
 )
+SUPPLEMENTARY_CATEGORIES = (
+    "T-SHIRTS", "SKIRTS", "TWO-PIECE SETS",
+    "OUTERWEAR", "SUITS", "KNIT SETS",
+)
+SUPPLEMENTARY_SAMPLE_PER_CATEGORY = 5
+TARGET_VIEW_LIMIT = 2
 STORE_NAMES = {"aloruh_shein": "Aloruh(shein)", **COMPETITOR_BRANDS}
 
 
@@ -62,27 +71,44 @@ def _select_rows(
         ]
         if not selected_categories:
             raise ValueError("report scope contains no target categories")
+        populations = {row["category"]: row["products"] for row in distribution}
         target, key_categories = _select_target_samples(
             connection, target_store, selected_categories,
-            sample_per_category, sample_seed,
-            {row["category"]: row["products"] for row in distribution},
+            sample_per_category, sample_seed, populations,
+            evidence_role="key_category_random_sample",
         )
+        supplementary_names = [] if categories else [
+            category for category in SUPPLEMENTARY_CATEGORIES
+            if category in populations and category not in selected_categories
+        ]
+        supplementary, supplementary_categories = _select_target_samples(
+            connection, target_store, supplementary_names,
+            SUPPLEMENTARY_SAMPLE_PER_CATEGORY, sample_seed, populations,
+            evidence_role="supplementary_category_random_sample",
+        )
+        target = _expand_target_views(
+            connection, target_store, target + supplementary, TARGET_VIEW_LIMIT,
+        )
+        analysis_categories = selected_categories + supplementary_names
         target_plan = {
             "store_profile": _store_profile(connection, target_store),
             "distribution": distribution,
             "key_categories": key_categories,
+            "supplementary_categories": supplementary_categories,
             "sampling": {
                 "method": "deterministic_random", "seed": sample_seed,
                 "sample_per_category": sample_per_category,
+                "supplementary_sample_per_category": SUPPLEMENTARY_SAMPLE_PER_CATEGORY,
+                "views_per_product": TARGET_VIEW_LIMIT,
             },
             "dimension_distributions": _store_dimension_distributions(
-                connection, target_store,
+                connection, target_store, DIMENSIONS,
             ),
         }
         competitors, stores = [], {}
         for store in COMPETITOR_STORES:
             selected, plan = _select_store_evidence(
-                connection, store, selected_categories,
+                connection, store, analysis_categories,
             )
             competitors.extend(selected)
             stores[store] = plan
@@ -104,7 +130,7 @@ def _select_rows(
         raise ValueError("report scope contains no target cover images")
     return result, {
         "method": "dimension_stratified", "dimensions": list(SELECTION_DIMENSIONS),
-        "target": target_plan, "stores": stores,
+        "target": target_plan, "categories": analysis_categories, "stores": stores,
     }
 
 
@@ -157,6 +183,7 @@ def _category_distribution(connection, store: str) -> list[dict]:
 def _select_target_samples(
     connection, store: str, categories: list[str],
     sample_per_category: int, seed: str, populations: dict[str, int],
+    evidence_role: str,
 ) -> tuple[list[dict], list[dict]]:
     selected, plans = [], []
     for category in categories:
@@ -164,7 +191,7 @@ def _select_target_samples(
         rng = random.Random(f"{seed}:{category}")
         sampled = rng.sample(rows, min(sample_per_category, len(rows)))
         reason = {
-            "evidence_role": "key_category_random_sample", "category": category,
+            "evidence_role": evidence_role, "category": category,
             "population_products": populations.get(category, 0),
             "eligible_cover_images": len(rows), "seed": seed,
         }
@@ -178,12 +205,37 @@ def _select_target_samples(
     return selected, plans
 
 
-def _store_dimension_distributions(connection, store: str) -> dict:
+def _expand_target_views(
+    connection, store: str, selected: list[dict], view_limit: int,
+) -> list[dict]:
+    if not selected:
+        return []
+    by_product = {row["product_id"]: row for row in selected}
+    placeholders = ",".join("?" for _ in by_product)
+    query = (
+        "SELECT i.store_id, i.product_id, i.position, i.source_url, p.title, "
+        "p.category, p.category_group, p.catalog_rank FROM images i "
+        "JOIN products p USING(store_id, product_id) WHERE i.store_id=? "
+        f"AND i.product_id IN ({placeholders}) AND i.position<=? "
+        "ORDER BY p.catalog_rank, p.product_id, i.position"
+    )
+    rows = connection.execute(
+        query, [store, *by_product, view_limit],
+    ).fetchall()
+    return [{
+        **dict(row),
+        "selection_reasons": by_product[row["product_id"]]["selection_reasons"],
+    } for row in rows]
+
+
+def _store_dimension_distributions(
+    connection, store: str, dimensions=SELECTION_DIMENSIONS,
+) -> dict:
     total = connection.execute(
         "SELECT COUNT(*) FROM products WHERE store_id=?", (store,),
     ).fetchone()[0]
     result = {}
-    for dimension in SELECTION_DIMENSIONS:
+    for dimension in dimensions:
         rows = [dict(row) for row in connection.execute(
             "SELECT t.tag, COUNT(DISTINCT t.product_id) AS images "
             "FROM image_analysis_tags t WHERE t.store_id=? AND t.position=1 "
@@ -386,7 +438,8 @@ def _public_image(item: dict) -> dict:
     return {
         "image_id": item["image_id"], "role": item["role"],
         "store_id": item["store_id"], "product_id": item["product_id"],
-        "category": item["category_group"], "title": item["title"],
+        "position": item["position"], "category": item["category_group"],
+        "title": item["title"],
         "selection_reasons": item["selection_reasons"], **download,
     }
 
@@ -400,12 +453,57 @@ def _compact_evidence(batch_results: list[dict], items: list[dict]) -> dict:
             row for batch in batch_results for row in batch["pattern_candidates"]
         ],
         "image_contexts": [{
-            key: item.get(key) for key in (
-                "image_id", "store_id", "product_id", "category", "role",
-                "selection_reasons",
-            )
+            **{
+                key: item.get(key) for key in (
+                    "image_id", "store_id", "product_id", "position", "title",
+                    "role", "selection_reasons",
+                )
+            },
+            "category": item.get("category_group") or item.get("category"),
         } for item in items],
     }
+
+
+def _validate_observation_batch(result: dict, batch: list[dict]) -> None:
+    expected = sorted(item["image_id"] for item in batch)
+    returned = sorted(row.get("image_id") for row in result.get("observations", []))
+    if returned != expected:
+        raise ValueError("saved report observation batch does not match its image scope")
+
+
+def _analyze_image_batches(
+    items: list[dict], analyzer, output: Path, progress,
+    workers: int = REPORT_ANALYSIS_WORKERS,
+) -> list[dict]:
+    if workers < 1:
+        raise ValueError("report analysis workers must be positive")
+    chunks = [items[start:start + BATCH_SIZE] for start in range(0, len(items), BATCH_SIZE)]
+    results = [None] * len(chunks)
+    pending = {}
+    completed_images = 0
+    observations = output / "observations"
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        for index, batch in enumerate(chunks):
+            path = observations / f"batch-{index + 1:04d}.json"
+            if path.is_file():
+                result = json.loads(path.read_text(encoding="utf-8"))
+                _validate_observation_batch(result, batch)
+                results[index] = result
+                completed_images += len(batch)
+                continue
+            pending[executor.submit(analyzer.analyze_images, batch)] = (index, batch, path)
+        for future in as_completed(pending):
+            index, batch, path = pending[future]
+            result = future.result()
+            _validate_observation_batch(result, batch)
+            _write_json(path, result)
+            results[index] = result
+            completed_images += len(batch)
+            progress(
+                "analyzing_all_images",
+                35 + round(completed_images / len(items) * 45),
+            )
+    return results
 
 
 def _validate_claim_references(report: dict, known_ids: set[str]) -> None:
@@ -480,9 +578,10 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
     if not target_total:
         raise RuntimeError("all target HD image downloads failed")
     key_category_analysis = competitor_evidence["target"]
-    categories = [
+    primary_categories = [
         row["category"] for row in key_category_analysis["key_categories"]
     ]
+    categories = competitor_evidence["categories"]
     downloaded_by_category = {
         category: sum(
             item["role"] == "target" and item["category_group"] == category
@@ -494,8 +593,19 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
         {**row, "downloaded_images": downloaded_by_category[row["category"]]}
         for row in key_category_analysis["key_categories"]
     ]
+    key_category_analysis["supplementary_categories"] = [
+        {**row, "downloaded_images": downloaded_by_category[row["category"]]}
+        for row in key_category_analysis["supplementary_categories"]
+    ]
     scope = {
         "target_store": args.target_store, "categories": categories,
+        "primary_categories": primary_categories,
+        "supplementary_categories": [
+            row["category"] for row in key_category_analysis["supplementary_categories"]
+        ],
+        "target_products": len({
+            item["product_id"] for item in items if item["role"] == "target"
+        }),
         "target_images": target_total,
         "competitor_images": sum(item["role"] == "competitor" for item in items),
         "competitor_population_images": sum(
@@ -508,13 +618,21 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
         "competitor_brands": COMPETITOR_BRANDS,
         "competitor_selection_dimensions": list(SELECTION_DIMENSIONS),
         "analysis_dimensions": {
-            "catalog_tag_dimensions": list(SELECTION_DIMENSIONS),
+            "target_catalog_tag_dimensions": list(DIMENSIONS),
+            "competitor_catalog_tag_dimensions": list(SELECTION_DIMENSIONS),
             "gpt_visible_observation_fields": list(OBSERVABLE_FIELDS),
         },
         "store_profile": key_category_analysis["store_profile"],
         "key_category_analysis": key_category_analysis,
-        "position": 1, "excluded_metrics": ["曝光", "点击", "转化", "销量", "ROI"],
+        "positions": [1, 2], "excluded_metrics": ["曝光", "点击", "转化", "销量", "ROI"],
         "excluded_analysis": ["人群画像", "代表红人", "敏感模特属性推断"],
+        "whitepaper_coverage": {
+            "included": [
+                "店铺基本信息", "重点品类", "风格划分", "产品卖点", "动作",
+                "常见搭配", "拍摄布景", "拍摄风格", "模特画像", "对标竞品",
+            ],
+            "excluded": ["人群画像", "代表红人"],
+        },
     }
     manifest = {
         "status": "analyzing", "scope": scope, "model": args.deployment,
@@ -528,28 +646,26 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
     _write_json(output / "manifest.json", manifest)
     usage = AnalysisUsageRecorder(
         output / "usage.jsonl", output / "usage-summary.json",
-        total_images=len(items), deployment=args.deployment, pricing=SOL_STANDARD_PRICING,
+        total_images=len(items), deployment=args.deployment,
+        pricing=pricing_for_deployment(args.deployment),
     )
     analyzer = AzureOpenAIReportAnalyzer(
-        AzureOpenAIOptions(args.endpoint, args.api_key, args.deployment), usage.record,
+        AzureOpenAIOptions(
+            args.endpoint, args.api_key, args.deployment,
+            getattr(args, "auth_type", "api_key"),
+        ),
+        usage.record,
     )
     batches = []
     try:
-        for start in range(0, len(items), BATCH_SIZE):
-            batch = items[start:start + BATCH_SIZE]
-            batches.append(analyzer.analyze_images(batch))
-            _write_json(output / "observations" / f"batch-{start // BATCH_SIZE + 1:04d}.json", batches[-1])
-            progress(
-                "analyzing_all_images",
-                35 + round(min(start + BATCH_SIZE, len(items)) / len(items) * 45),
-            )
+        batches = _analyze_image_batches(items, analyzer, output, progress)
         evidence = {
             **_compact_evidence(batches, items),
             "competitor_evidence": competitor_evidence,
         }
         _write_json(output / "image-observations.json", evidence)
         progress("synthesizing_report_sections", 85)
-        report = analyzer.synthesize(evidence, scope)
+        report = analyzer.synthesize(evidence, scope, output / "section-checkpoints")
         _validate_claim_references(report, {item["image_id"] for item in items})
         _validate_competitor_brand_claims(report, items)
     except Exception:
@@ -561,7 +677,8 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
         "sections": report["sections"], "image_observations": evidence["observations"],
         "analysis_contract": {
             "section_ids": list(SECTION_IDS),
-            "catalog_tag_dimensions": list(SELECTION_DIMENSIONS),
+            "target_catalog_tag_dimensions": list(DIMENSIONS),
+            "competitor_catalog_tag_dimensions": list(SELECTION_DIMENSIONS),
             "gpt_visible_observation_fields": list(OBSERVABLE_FIELDS),
             "excluded_analysis": scope["excluded_analysis"],
             "claim_evidence_required": [
@@ -589,10 +706,14 @@ def revise_report_section(args, progress=lambda _stage, _value: None) -> Path:
     usage = AnalysisUsageRecorder(
         output / "revision-usage.jsonl", output / "revision-usage-summary.json",
         total_images=len(result["images"]), deployment=args.deployment,
-        pricing=SOL_STANDARD_PRICING,
+        pricing=pricing_for_deployment(args.deployment),
     )
     analyzer = AzureOpenAIReportAnalyzer(
-        AzureOpenAIOptions(args.endpoint, args.api_key, args.deployment), usage.record,
+        AzureOpenAIOptions(
+            args.endpoint, args.api_key, args.deployment,
+            getattr(args, "auth_type", "api_key"),
+        ),
+        usage.record,
     )
     progress("revising_section", 40)
     try:
@@ -630,6 +751,7 @@ def default_args(**overrides):
         "deployment": "gpt-5.6-sol",
         "endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT"),
         "api_key": os.environ.get("AZURE_OPENAI_KEY"),
+        "auth_type": "api_key",
     }
     values.update(overrides)
     return SimpleNamespace(**values)

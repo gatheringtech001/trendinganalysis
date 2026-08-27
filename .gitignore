@@ -43,12 +43,13 @@ slides/**/screenshots-montage.png
 
 # Scratch files
 tmp/*
+.tmp/
 
 # Keep only the current presentation deliverable
 output/*.pptx
 output/*.inspect.ndjson
 output/*/
-!output/Fashion-Scope-技术架构与产品体验-20260826-v6.pptx
+!output/Fashion-Scope-技术架构与产品体验-20260827-v9-final.pptx
 
 # Root-level imports and archives
 /*.jsonl

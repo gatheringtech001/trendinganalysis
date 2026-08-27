@@ -9,6 +9,7 @@ from PIL import Image
 from pypdf import PdfReader
 
 import report_pdf
+from report_pdf_layout import DeckBase
 from visual_reports import PDF_NAME, SOURCE_NOTES_NAME
 
 
@@ -44,7 +45,7 @@ class ReferenceReportPdfTest(unittest.TestCase):
         return {
             "claim_id": prefix,
             "conclusion": f"{SECTION_TITLES[section_id]}第{index + 1}条结论。",
-            "derivation": "从全量逐图观察中归纳，并由支持图和边界反例复核。",
+            "derivation": "从重点品类随机样本中归纳，并由支持图和边界反例复核。",
             "evidence": {
                 "sample_count": 8,
                 "filters": "全量目标图片",
@@ -67,7 +68,7 @@ class ReferenceReportPdfTest(unittest.TestCase):
                 "section_id": section_id,
                 "title": SECTION_TITLES[section_id],
                 "summary": f"{SECTION_TITLES[section_id]}章节摘要。",
-                "methodology": "全量逐图观察。",
+                "methodology": "重点品类随机样本逐图观察。",
                 "claims": claims,
             })
             for index, claim in enumerate(claims):
@@ -76,7 +77,7 @@ class ReferenceReportPdfTest(unittest.TestCase):
                     if section_id == "brand_positioning" and index == 0:
                         category = "DRESSES"
                     elif section_id == "product_display" and index == 1:
-                        category = "SKIRTS"
+                        category = "BLOUSES"
                     else:
                         category = "TOPS"
                     images.append({
@@ -90,10 +91,15 @@ class ReferenceReportPdfTest(unittest.TestCase):
                         ],
                     })
                     is_support = image_id in claim["evidence"]["support_image_ids"]
-                    if section_id == "product_display" and index == 0:
+                    if category == "DRESSES":
+                        framing, pose, garment = "全身全长", "正面站立", "连衣裙腰线至下摆完整"
+                    elif section_id == "product_display" and index == 0:
                         framing, pose, garment = "上半身近景", "正面站立", "上衣正面局部细节"
                     elif section_id == "product_display" and index == 1:
-                        framing, pose, garment = "全身全长", "正面站立", "裙装腰头至下摆完整"
+                        if is_support:
+                            framing, pose, garment = "上半身近景", "正面站立", "衬衫正面局部细节"
+                        else:
+                            framing, pose, garment = "背面中景", "模特背对镜头", "后背结构清楚"
                     elif section_id == "product_display" and index == 2 and not is_support:
                         framing, pose, garment = "背面中景", "人物背对镜头", "上衣背面结构清楚"
                     else:
@@ -118,26 +124,41 @@ class ReferenceReportPdfTest(unittest.TestCase):
                     })
         return {
             "scope": {
+                "target_products": 89,
                 "target_images": 60,
-                "competitor_images": 106,
-                "competitor_population_images": 15107,
-                "categories": ["DRESSES", "TOPS", "SKIRTS"],
+                "competitor_images": 97,
+                "competitor_population_images": 11050,
+                "categories": ["DRESSES", "TOPS", "BLOUSES"],
                 "store_profile": {
                     "store_name": "Aloruh(shein)", "platform": "SHEIN SG",
-                    "product_count": 2560, "image_count": 12000,
+                    "product_count": 2848, "image_count": 4352,
                     "market": "SG", "channel": "browser_assisted",
                     "data_updated_at": "2026-08-18",
                 },
                 "key_category_analysis": {
                     "distribution": [
-                        {"category": "DRESSES", "products": 1200, "share": 0.4688},
-                        {"category": "TOPS", "products": 760, "share": 0.2969},
-                        {"category": "SKIRTS", "products": 340, "share": 0.1328},
+                        {"category": "DRESSES", "products": 1159, "share": 0.4070},
+                        {"category": "TOPS", "products": 561, "share": 0.1970},
+                        {"category": "BLOUSES", "products": 284, "share": 0.0997},
+                        {"category": "T-SHIRTS", "products": 266, "share": 0.0934},
+                        {"category": "SKIRTS", "products": 126, "share": 0.0442},
+                        {"category": "TWO-PIECE SETS", "products": 90, "share": 0.0316},
+                        {"category": "OUTERWEAR", "products": 33, "share": 0.0116},
+                        {"category": "SUITS", "products": 26, "share": 0.0091},
+                        {"category": "KNIT SETS", "products": 8, "share": 0.0028},
                     ],
                     "key_categories": [
-                        {"category": "DRESSES", "population_products": 1200, "sample_selected": 20},
-                        {"category": "TOPS", "population_products": 760, "sample_selected": 20},
-                        {"category": "SKIRTS", "population_products": 340, "sample_selected": 20},
+                        {"category": "DRESSES", "population_products": 1159, "sample_selected": 20},
+                        {"category": "TOPS", "population_products": 561, "sample_selected": 20},
+                        {"category": "BLOUSES", "population_products": 284, "sample_selected": 20},
+                    ],
+                    "supplementary_categories": [
+                        {"category": category, "population_products": products, "sample_selected": 5}
+                        for category, products in (
+                            ("T-SHIRTS", 266), ("SKIRTS", 126),
+                            ("TWO-PIECE SETS", 90), ("OUTERWEAR", 33),
+                            ("SUITS", 26), ("KNIT SETS", 8),
+                        )
                     ],
                     "sampling": {"method": "deterministic_random", "seed": "analysis-one", "sample_per_category": 20},
                     "dimension_distributions": {
@@ -150,6 +171,18 @@ class ReferenceReportPdfTest(unittest.TestCase):
                 "excluded_metrics": ["CTR", "销量"],
             },
             "executive_summary": ["结论一", "结论二"],
+            "competitor_evidence": {
+                "stores": {
+                    store: {
+                        "categories": {
+                            "DRESSES": {"status": "dimension_tags_unavailable"},
+                            "TOPS": {"status": "available"},
+                            "BLOUSES": {"status": "category_unavailable"},
+                        },
+                    }
+                    for store in competitor_stores
+                },
+            },
             "sections": sections,
             "images": images,
             "image_observations": observations,
@@ -174,7 +207,7 @@ class ReferenceReportPdfTest(unittest.TestCase):
 
         notes = json.loads((self.root / SOURCE_NOTES_NAME).read_text(encoding="utf-8"))
         layout = notes["layout_contract"]
-        self.assertEqual("reference-53-page-v2", layout["version"])
+        self.assertEqual("reference-53-page-v3", layout["version"])
         self.assertEqual("33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253", layout["reference_sha256"])
         self.assertEqual([[2, "brand_positioning"], [7, "product_display"], [15, "store_visual_audit"], [26, "competitive_gap"], [40, "visual_upgrade"]], layout["section_page_order"])
         expected = [row["image_id"] for row in report["images"]]
@@ -190,12 +223,18 @@ class ReferenceReportPdfTest(unittest.TestCase):
         self.assertIn("Calibration", text)
         self.assertIn("店铺基本信息", text)
         self.assertIn("重点品类", text)
+        self.assertIn("产品卖点", text)
+        self.assertIn("T-SHIRTS", text)
+        self.assertIn("OUTERWEAR", text)
+        self.assertIn("KNIT SETS", text)
         self.assertIn("可见模特画像", text)
         self.assertIn("PRODUCT\nDISPLAY\nANALYSIS", text)
         self.assertIn("STORE\nVISUAL\nAUDIT", text)
         self.assertIn("Discrepancy", text)
         self.assertIn("Breakdown", text)
         self.assertIn("VISUAL\nUPGRADE\nDIRECTION", text)
+        self.assertIn("三家竞品共同12维可比范围", text)
+        self.assertIn("DRESSES / BLOUSES", text)
         self.assertNotIn("逐图观察索引", text)
 
     def test_product_pages_record_semantically_valid_image_placements(self):
@@ -212,7 +251,7 @@ class ReferenceReportPdfTest(unittest.TestCase):
         self.assertTrue(page_eleven)
         self.assertEqual({"DRESSES"}, {row["category"] for row in page_nine})
         self.assertEqual({"TOPS"}, {row["category"] for row in page_ten})
-        self.assertEqual({"SKIRTS"}, {row["category"] for row in page_eleven})
+        self.assertEqual({"BLOUSES"}, {row["category"] for row in page_eleven})
 
         matrix = {
             row["slot"]: row
@@ -220,10 +259,55 @@ class ReferenceReportPdfTest(unittest.TestCase):
             if row["page"] == 14
         }
         self.assertEqual("TOPS", matrix["TOPS 近景"]["category"])
-        self.assertEqual("SKIRTS", matrix["SKIRTS 全长"]["category"])
-        self.assertIn("正面", matrix["正面"]["semantic_text"])
-        self.assertRegex(matrix["背面"]["semantic_text"], "背面|背对")
-        self.assertRegex(matrix["局部"]["semantic_text"], "局部|近景|特写")
+        self.assertEqual("DRESSES", matrix["DRESSES 全长"]["category"])
+        self.assertEqual("BLOUSES", matrix["正面"]["category"])
+        self.assertEqual("BLOUSES", matrix["背面"]["category"])
+        self.assertEqual("BLOUSES", matrix["局部"]["category"])
+        self.assertRegex(
+            " ".join(matrix["正面"]["semantic_fields"].values()),
+            "正面|正向|面向镜头|正对镜头",
+        )
+        back = " ".join(matrix["背面"]["semantic_fields"].values())
+        self.assertRegex(back, "背面|背对|后侧|后背")
+        self.assertNotRegex(back, "背面不可见|背面不清楚|未展示背面")
+        self.assertRegex(
+            " ".join(matrix["局部"]["semantic_fields"].values()),
+            "局部|近景|特写|近距离",
+        )
+
+    def test_semantic_matching_rejects_negative_or_unrelated_keyword_hits(self):
+        deck = DeckBase.__new__(DeckBase)
+        deck.images = {
+            "front": {"category": "BLOUSES", "selection_reasons": [], "title": ""},
+            "back": {"category": "BLOUSES", "selection_reasons": [], "title": ""},
+        }
+        deck.observations = {
+            "front": {"observable": {
+                "pose_action": "正面站立",
+                "garment_display": "正面清楚，背面不可见",
+                "face_visibility": "局部侧脸可见",
+                "framing": "全身",
+            }},
+            "back": {"observable": {
+                "pose_action": "模特背对镜头",
+                "garment_display": "后背结构清楚",
+                "face_visibility": "局部侧脸可见",
+                "framing": "后侧半身",
+            }},
+        }
+        back_requirements = {
+            "semantic_fields": ["pose_action", "framing", "garment_display"],
+            "include_any": ["背面", "背对", "后侧", "后背"],
+            "exclude_any": ["背面不可见", "背面不清楚", "未展示背面"],
+        }
+        detail_requirements = {
+            "semantic_fields": ["framing", "garment_display", "design_details", "material_texture"],
+            "include_any": ["局部", "近景", "特写", "近距离"],
+        }
+
+        self.assertFalse(deck._matches("front", back_requirements))
+        self.assertTrue(deck._matches("back", back_requirements))
+        self.assertFalse(deck._matches("back", detail_requirements))
 
     def test_fetch_image_reuses_report_analysis_shared_cache(self):
         source_url = "https://example.com/thumb.jpg"
