@@ -21,6 +21,12 @@ const observableLabels = {
   face_visibility: "面部可见性", hairstyle: "可见发型",
   makeup_presentation: "可见妆容", expression_gaze: "表情与视线",
 };
+const preferredAnalysisId = (items = []) => (
+  items.find((row) => row.status === "complete" && row.review?.ready_for_final)?.job_id
+  || items[0]?.job_id || ""
+);
+const formatDateTime = (value) => value
+  ? new Date(value).toLocaleString("zh-CN", { hour12: false }) : "未记录";
 
 function UsageRow({ label, usage }) {
   return <div><strong>{label}</strong><span>{formatNumber(usage?.total_tokens)} Token</span>
@@ -215,6 +221,22 @@ function FinalReport({ analysis, generation, report, onGenerate }) {
   </div>;
 }
 
+function CurrentReport({ report }) {
+  if (!report?.has_pdf) return null;
+  return <section className="current-report-card">
+    <div><span>CURRENT DELIVERABLE</span><h2>当前成品报告</h2>
+      <p>这是网站当前对外提供的PDF；重新生成成功后会原位更新。</p></div>
+    <dl><div><dt>生成时间</dt><dd>{formatDateTime(report.generated_at)}</dd></div>
+      <div><dt>页数</dt><dd>{formatNumber(report.pages)} 页</dd></div>
+      <div><dt>目标图片</dt><dd>{formatNumber(report.sample_count)} 张</dd></div>
+      <div><dt>来源分析任务</dt><dd>{report.approved_analysis?.job_id || "未记录"}</dd></div></dl>
+    <div className="current-report-actions">
+      <a href={api.reportFileUrl(report.report_id)} target="_blank" rel="noreferrer">浏览PDF</a>
+      <a download href={api.reportFileUrl(report.report_id)}>下载PDF</a>
+    </div>
+  </section>;
+}
+
 export default function Reports() {
   const [tab, setTab] = useState("analysis");
   const [jobs, setJobs] = useState([]);
@@ -228,8 +250,10 @@ export default function Reports() {
   const running = jobs.some((row) => ["queued", "running"].includes(row.status)
     || ["queued", "running"].includes(row.revision?.status));
   const refresh = () => Promise.all([api.reportAnalyses(), api.reports()]).then(([analyses, reports]) => {
-    setJobs(analyses.items || []);
-    setSelected((value) => value || analyses.items?.[0]?.job_id || "");
+    const items = analyses.items || [];
+    setJobs(items);
+    setSelected((value) => items.some((row) => row.job_id === value)
+      ? value : preferredAnalysisId(items));
     const first = reports.items?.[0];
     return first ? api.report(first.report_id).then(setReport) : setReport(null);
   });
@@ -286,12 +310,15 @@ export default function Reports() {
       <button className={tab === "final" ? "active" : ""} disabled={!job?.review?.ready_for_final}
         onClick={() => setTab("final")} type="button">2. 生成最终PDF</button></nav>
     {error ? <div className="error-banner">{error}</div> : null}
+    <CurrentReport report={report} />
     {tab === "analysis" ? <><StartAnalysis categories={keyCategoryPreview} disabled={running}
       onStart={start} summary={catalogSummary} />
       {jobs.length ? <div className="report-job-picker">{jobs.map((row) => <button
         className={row.job_id === selected ? "active" : ""} key={row.job_id}
         onClick={() => setSelected(row.job_id)} type="button">
-        <strong>{row.job_id.slice(0, 8)}</strong><span>{row.status}</span></button>)}</div> : null}
+        <strong>{row.job_id}</strong><span>{row.status} · {formatDateTime(
+          row.updated_at || row.usage?.finished_at || row.usage?.updated_at,
+        )}</span></button>)}</div> : null}
       {job && ["queued", "running"].includes(job.status) ? <section className="report-generation">
         <strong>{stageLabels[job.stage] || job.stage}</strong><progress max="100" value={job.progress || 0} />
       </section> : null}

@@ -28,11 +28,10 @@ Production evidence
 - Screenshots: assets/experience1-step6-analysis-running.png and assets/experience1-step7-analysis-result.png.
 
 Report evidence
-- output/pdf/Aloruh店铺视觉诊断-内容驱动版-20260827.pdf
+- output/pdf/Aloruh店铺视觉诊断-生产UI生成-20260827.pdf
 - slides/fashion-scope/assets/page-*.jpg
-- Production UI regenerated the final PDF from analysis job whitepaper-20260827a on 2026-08-27. The UI-generated file has 53 pages and SHA-256 2A52904C5B182C608BD20DA08B238ABD2D145446B48D32F17CFA15001E3C6932.
-- Page-by-page QA found 25 analytical claims across five sections, plus divider, fact, evidence, boundary, recommendation, and plan pages. Twelve pages require interpretation cautions: P5, P9-11, P20, P22, P24, P43, P47-49, and P53.
-- Embedded-image reuse audit: 187 unique embedded images; 52 images recur across pages; the most repeated image appears on 15 pages. Reuse is not automatically incorrect, but the report currently does not label the role on every reused evidence page.
+- Production UI regenerated the final PDF from analysis job whitepaper-20260827a on 2026-08-27. The UI-generated file has 49 pages and SHA-256 8A8040A9282C069ECF2469E9937B6EC808200FC17E0304081AE1AB84D5DC9D17.
+- Page-by-page QA covered all 49 pages. P14 now binds DRESSES, TOPS, and BLOUSES to separate images and copy; P24 uses store-level visible-model statistics; P44-P45 clarify non-identical-item examples; P48-P49 use distinct product-information and brand-atmosphere evidence.
 
 Current verified values used in the deck
 - Website overview: 60,260 SKUs; 288,831 image index rows; 27,355 analyzed images; 650,411 analysis tags.
@@ -55,4 +54,4 @@ Current verified values used in the deck
 - Experience 2 conclusion boundary: all 349 successful HD images are analyzed once. Each section then receives role-filtered observations with only its relevant fields; this is field projection, not a second sample. Five section calls are checkpointed independently, followed by one executive-summary call.
 - Report scope: target sampling planned 89 products (60 primary and 29 supplementary); global source-URL deduplication retained 81 products with independent image evidence (55 primary and 26 supplementary). The run analyzed 159 target image-position records: 78 products retained two images and 3 retained one. Positions 1-2 are retrieval slots, not semantic front/back labels. Competitor scope used a 15,107-image 12-dimension population (TOPS and SKIRTS), 190 competitor HD evidence images, and 349/349 analyzed images in total.
 - Report run: 349 cache hits, 0 network downloads, 50 model calls, 1,277,211 total tokens, estimated Sol cost $15.577616. The preceding Terra retag cost was about $9.43; combined estimated model cost was about $25.01.
-- Final report: 5 sections; the current complete dataset generates 53 pages, but page count now follows available sections, claims, competitors, and key categories instead of a fixed 53-page assertion. PLAN A uses neutral product-information evidence; PLAN B uses separate brand-atmosphere evidence with zero cross-plan image reuse. PDF layout uses 0 model tokens. File SHA-256 614a40b73e749965237d1566be82df24a840e77190326e8e6b2f2c0d8eb8ca85.
+- Final report: 5 sections; the current complete dataset generates 49 pages, and page count follows available sections, claims, competitors, and key categories. PLAN A uses neutral product-information evidence; PLAN B uses separate real brand-atmosphere evidence. PDF layout uses 0 model tokens. Production UI file SHA-256 8A8040A9282C069ECF2469E9937B6EC808200FC17E0304081AE1AB84D5DC9D17.

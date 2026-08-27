@@ -6,8 +6,8 @@ import { Presentation, PresentationFile } from "@oai/artifact-tool";
 const TMP = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(TMP, "..", "..");
 const ASSETS = path.join(TMP, "assets");
-const RENDERS = path.join(TMP, "renders-v12");
-const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260827-v12-final.pptx");
+const RENDERS = path.join(TMP, "renders-v13");
+const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260827-v13-final.pptx");
 
 const W = 1280;
 const H = 720;
@@ -229,9 +229,9 @@ const p = Presentation.create({ slideSize: { width: W, height: H } });
   addText(s, "FINAL DELIVERY / PLAN B", { left: 600, top: 62, width: 320, height: 20 },
     { fontSize: 13, typeface: FONT_LATIN, bold: true, color: "#8D9198" });
   addBox(s, { left: 586, top: 96, width: 646, height: 548 }, "#1E1E1E", "none", 8);
-  await addImage(s, "page-53.jpg", { left: 606, top: 118, width: 606, height: 503 },
+  await addImage(s, "page-49.jpg", { left: 606, top: 118, width: 606, height: 503 },
     { alt: "Final visual diagnosis recommendation page", fit: "contain" });
-  addNotes(s, [`${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
+  addNotes(s, [`${sources.repo}/slides/fashion-scope/assets/page-49.jpg`]);
 }
 
 let pageNumber = 2;
@@ -1065,13 +1065,13 @@ for (const demo of experience2Demos) {
   const s = p.slides.add();
   s.background.fill = WHITE;
   addHeader(s, "内容驱动成品由五个 Section 逐层收敛到行动方案", "PDF structure", pageNumber++,
-    "当前完整任务映射为53页；缺少章节、结论、竞品或重点品类时才会缩短，不应把53页理解为53个结论。");
+    "当前完整任务映射为49页；页数由实际章节、证据和方案内容决定，不应把49页理解为49个结论。");
   const items = [
     ["page-04.jpg", "品牌视觉定位校准", "P2–6", "店铺规模、重点品类与风格是什么？"],
     ["page-14.jpg", "商品展示分析", "P7–14", "三类主分析＋六类交叉验证怎样展示商品？"],
     ["page-22.jpg", "店铺视觉审计", "P15–25", "布景、图法与可见模特哪里失序？"],
-    ["page-27.jpg", "竞品视觉差距", "P26–39", "在TOPS与SKIRTS可比范围内差在哪里？"],
-    ["page-44.jpg", "视觉升级方向", "结论页＋PLAN A/B", "下一步怎么改？"],
+    ["page-27.jpg", "竞品视觉差距", "P26–35", "在TOPS与SKIRTS可比范围内差在哪里？"],
+    ["page-44.jpg", "视觉升级方向", "P36–49", "下一步怎么改？"],
   ];
   for (let i = 0; i < items.length; i += 1) {
     const x = 48 + i * 238;
@@ -1088,7 +1088,7 @@ for (const demo of experience2Demos) {
   addText(s, "范围与分母清楚 · 图片角色清楚 · 店铺归属清楚 · 结论能够回查到 image_id",
     { left: 280, top: 578, width: 890, height: 30 }, { fontSize: 17, color: MUTED });
   addFooter(s);
-  addNotes(s, [`${sources.repo}/app/report_pdf_pages.py`, `${sources.repo}/output/pdf/Aloruh店铺视觉诊断-内容驱动版-20260827.pdf`]);
+  addNotes(s, [`${sources.repo}/app/report_pdf_pages.py`, `${sources.repo}/output/pdf/Aloruh店铺视觉诊断-生产UI生成-20260827.pdf`]);
 }
 
 // Finished artifact showcase.
@@ -1100,28 +1100,28 @@ for (const demo of experience2Demos) {
   await addImage(s, "page-48.jpg", { left: 500, top: 156, width: 730, height: 411 }, { alt: "Hero image optimization example" });
   await addImage(s, "page-09.jpg", { left: 48, top: 156, width: 212, height: 119 }, { alt: "Tops visual analysis example" });
   await addImage(s, "page-28.jpg", { left: 276, top: 156, width: 212, height: 119 }, { alt: "Competitor visual system example" });
-  await addImage(s, "page-51.jpg", { left: 48, top: 295, width: 440, height: 247 }, { alt: "Final reference board example" });
-  metric(s, "53", "当前成品页数", 48, 574, 160, true);
+  await addImage(s, "page-49.jpg", { left: 48, top: 295, width: 440, height: 247 }, { alt: "Brand atmosphere layer example" });
+  metric(s, "49", "当前成品页数", 48, 574, 160, true);
   metric(s, "5", "个可审核 Section", 230, 574, 200);
   addText(s, "成品文件", { left: 500, top: 594, width: 120, height: 22 }, { fontSize: 16, bold: true, color: MUTED });
-  addText(s, "Aloruh店铺视觉诊断－内容驱动版－20260827.pdf", { left: 620, top: 588, width: 580, height: 32 },
+  addText(s, "Aloruh店铺视觉诊断－生产UI生成－20260827.pdf", { left: 620, top: 588, width: 580, height: 32 },
     { fontSize: 18, bold: true });
   addFooter(s, "Fashion Scope · final report rendered and visually checked page by page");
-  addNotes(s, [`${sources.repo}/output/pdf/Aloruh店铺视觉诊断-内容驱动版-20260827.pdf`, `${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
+  addNotes(s, [`${sources.repo}/output/pdf/Aloruh店铺视觉诊断-生产UI生成-20260827.pdf`, `${sources.repo}/slides/fashion-scope/assets/page-49.jpg`]);
 }
 
 // Reading guide 1: page roles.
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "53页不是53个结论：先识别页面角色，再判断内容", "How to read the PDF · 1/3", pageNumber++,
+  addHeader(s, "49页不是49个结论：先识别页面角色，再判断内容", "How to read the PDF · 1/3", pageNumber++,
     "五章共25条核心claim；其余页面负责建立范围、展开证据、显示边界或转化为执行方案。");
   const roles = [
-    ["01", "章节页", "P2 / 7 / 15 / 26 / 40", "只负责切换问题，不产生新结论"],
+    ["01", "章节页", "P2 / 7 / 15 / 26 / 36", "只负责切换问题，不产生新结论"],
     ["02", "事实页", "P3–5", "目录规模与品类占比来自全量数据"],
-    ["03", "结论页", "如P8 / 28 / 35 / 41", "必须能回指推导、分母与观察字段"],
-    ["04", "证据与边界页", "如P17 / 29–38 / 50–51", "图片说明claim，不等于新的统计结论"],
-    ["05", "建议与方案页", "P39 / 43–49 / 52–53", "把已验证问题转成图序与拍摄规则"],
+    ["03", "结论页", "如P8 / 28 / 31 / 33 / 37", "必须能回指推导、分母与观察字段"],
+    ["04", "证据与边界页", "如P17 / 29–34 / 44–45", "图片说明claim，不等于新的统计结论"],
+    ["05", "建议与方案页", "P35 / 37–49", "把已验证问题转成图序与拍摄规则"],
   ];
   roles.forEach((row, index) => {
     const x = 48 + index * 238;
@@ -1157,8 +1157,8 @@ for (const demo of experience2Demos) {
     ["S1", "品牌定位", "P2–6", "卖什么？\n已有何种视觉代码？"],
     ["S2", "商品展示", "P7–14", "卖点是否被看清？\n多视角是否互补？"],
     ["S3", "店铺审计", "P15–25", "背景、光线、图文\n是否形成一致系统？"],
-    ["S4", "竞品差距", "P26–39", "同品类比较中\n差的是哪套规则？"],
-    ["S5", "升级方向", "P40–53", "哪些规则应固化？\n图序怎样落地？"],
+    ["S4", "竞品差距", "P26–35", "同品类比较中\n差的是哪套规则？"],
+    ["S5", "升级方向", "P36–49", "哪些规则应固化？\n图序怎样落地？"],
   ];
   sections.forEach((row, index) => {
     const x = 48 + index * 238;
@@ -1194,17 +1194,17 @@ for (const demo of experience2Demos) {
   ]);
 }
 
-// Reading guide 3: verified mapping issues.
+// Reading guide 3: verified fixes and remaining data boundaries.
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "当前报告的主要阅读风险集中在12页，不能按标题直接下结论", "How to read the PDF · 3/3", pageNumber++,
-    "以下问题来自生产界面重新生成的53页PDF与页面配置、真实claim及嵌入图片的逐页对照。");
+  addHeader(s, "逐页查验已闭环四类错配，剩余限制来自数据边界", "How to read the PDF · 3/3", pageNumber++,
+    "以下结论来自生产UI重新生成的49页PDF与页面配置、真实claim及嵌入图片的逐页对照。");
   const risks = [
-    ["P5 / P9–11", "样本单位写错", "实际是每类随机20个商品，并非20张图；成功读取分别为39、36、34张。"],
-    ["P20 / P22 / P24", "标题与claim错位", "文字模板页绑定光线claim；首图类型页绑定场景claim；模特画像页未绑定模特claim。"],
-    ["P43 / P47", "口号超过证据", "“追趋势”和趋势转译流程并非其绑定claim直接推导，应按策略建议阅读。"],
-    ["P48 / P49 / P53", "对比语义不成立", "不是同款改造前后；PLAN B实际仍偏棚拍，品牌氛围层证据不足。"],
+    ["P14", "品类图文已对齐", "DRESSES、TOPS、BLOUSES分别绑定对应图片，以及各自的构图、动作、卖点、场景和搭配。"],
+    ["P16 / P22 / P24", "统计口径已统一", "场景、首图类型与可见模特按159张目标图或79张position 1确定性统计，明确分母和单位。"],
+    ["P44 / P45", "示例语义已澄清", "明确为图位职责与拍摄规则参考，不再声称同款改造前后，也不伪造点击效果。"],
+    ["P48 / P49", "PLAN A/B已分层", "A只讲商品信息层；B只用真实生活方式场景讲品牌氛围层，两套图片不再重复。"],
   ];
   risks.forEach((row, index) => {
     const y = 170 + index * 106;
@@ -1217,15 +1217,15 @@ for (const demo of experience2Demos) {
     addRule(s, 48, y + 78, 1152, "#D7D9DD");
   });
   addBox(s, { left: 48, top: 594, width: 1152, height: 58 }, LIGHT_BLUE, "none", 8, "reuse-note");
-  addText(s, "图片复用审计", { left: 70, top: 613, width: 160, height: 24 }, { fontSize: 17, bold: true, color: BLUE });
-  addText(s, "187张唯一嵌入图中，52张跨页重复；最极端一张出现15页。重复不一定错误，但必须标明其证据角色。",
+  addText(s, "仍保留的数据边界", { left: 70, top: 613, width: 190, height: 24 }, { fontSize: 17, bold: true, color: BLUE });
+  addText(s, "不补人群画像、代表红人或敏感属性；竞品只比较12维完整的TOPS与SKIRTS；不把视觉观察写成CTR/CVR因果。",
     { left: 242, top: 611, width: 920, height: 28 }, { fontSize: 17, color: INK });
-  addFooter(s, "Fashion Scope · production UI PDF page-by-page QA · 2026-08-27");
+  addFooter(s, "Fashion Scope · 49-page production UI PDF · page-by-page QA · 2026-08-27");
   addNotes(s, [
     "Production UI: https://regardsjob.eastasia.cloudapp.azure.com/fashion-scope/#reports",
     `${sources.repo}/app/report_pdf_pages.py`,
     `${sources.repo}/.tmp/whitepaper-20260827a-job.json`,
-    "UI-generated PDF SHA-256 2A52904C5B182C608BD20DA08B238ABD2D145446B48D32F17CFA15001E3C6932",
+    "UI-generated PDF SHA-256 8A8040A9282C069ECF2469E9937B6EC808200FC17E0304081AE1AB84D5DC9D17",
   ]);
 }
 

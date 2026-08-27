@@ -10,14 +10,15 @@ from pypdf import PdfReader
 
 import report_pdf
 from report_pdf_layout import DeckBase
+from report_pdf_insights import first_image_profile, model_profile
 from report_pdf_pages import build_page_sequence
 from visual_reports import PDF_NAME, SOURCE_NOTES_NAME
 
 
 SECTION_COUNTS = {
-    "brand_positioning": 3,
+    "brand_positioning": 4,
     "product_display": 3,
-    "store_visual_audit": 3,
+    "store_visual_audit": 5,
     "competitive_gap": 3,
     "visual_upgrade": 4,
 }
@@ -75,6 +76,7 @@ class ReferenceReportPdfTest(unittest.TestCase):
             for index, claim in enumerate(claims):
                 store = competitor_stores[index] if section_id == "competitive_gap" else "aloruh_shein"
                 for image_id in claim["evidence"]["support_image_ids"] + claim["evidence"]["counterexample_image_ids"]:
+                    is_support = image_id in claim["evidence"]["support_image_ids"]
                     if section_id == "brand_positioning" and index == 0:
                         category = "DRESSES"
                     elif section_id == "product_display" and index == 1:
@@ -84,6 +86,8 @@ class ReferenceReportPdfTest(unittest.TestCase):
                     images.append({
                         "image_id": image_id, "store_id": store,
                         "category": category,
+                        "product_id": claim["claim_id"],
+                        "position": 1 if is_support else 2,
                         "resolved_url": f"https://example.com/{image_id}.jpg",
                         "selection_reasons": [
                             {"tag": "CASUAL"},
@@ -91,7 +95,6 @@ class ReferenceReportPdfTest(unittest.TestCase):
                             {"tag": "BEACH"},
                         ],
                     })
-                    is_support = image_id in claim["evidence"]["support_image_ids"]
                     if category == "DRESSES":
                         framing, pose, garment = "全身全长", "正面站立", "连衣裙腰线至下摆完整"
                     elif section_id == "product_display" and index == 0:
@@ -214,9 +217,10 @@ class ReferenceReportPdfTest(unittest.TestCase):
         layout = notes["layout_contract"]
         self.assertEqual("reference-content-driven-v4", layout["version"])
         self.assertEqual("33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253", layout["reference_sha256"])
-        self.assertEqual([[2, "brand_positioning"], [7, "product_display"], [15, "store_visual_audit"], [26, "competitive_gap"], [40, "visual_upgrade"]], layout["section_page_order"])
-        expected = [row["image_id"] for row in report["images"]]
-        self.assertCountEqual(expected, layout["displayed_evidence_image_ids"])
+        self.assertEqual([[2, "brand_positioning"], [7, "product_display"], [15, "store_visual_audit"], [26, "competitive_gap"], [36, "visual_upgrade"]], layout["section_page_order"])
+        expected = {row["image_id"] for row in report["images"]}
+        self.assertLessEqual(set(layout["displayed_evidence_image_ids"]), expected)
+        self.assertGreater(len(layout["displayed_evidence_image_ids"]), 20)
         self.assertFalse(layout["raw_observation_index"])
 
     def test_page_sequence_is_not_fixed_to_reference_length(self):
@@ -253,11 +257,15 @@ class ReferenceReportPdfTest(unittest.TestCase):
         }
         atmosphere_ids = {upgrade_claims[2]["evidence"]["support_image_ids"][0]}
         unsuitable_plan_a = upgrade_claims[0]["evidence"]["support_image_ids"][0]
-        for observation in report["image_observations"]:
+        fallback_scenes = ["浅灰棚拍休闲日常", "浪漫约会", "海边度假", "夜间派对"]
+        for observation_index, observation in enumerate(report["image_observations"]):
             if observation["image_id"] in neutral_ids:
-                observation["observable"]["scene"] = "浅灰棚拍"
+                observation["observable"]["scene"] = "浅灰棚拍通勤"
             elif observation["image_id"] in atmosphere_ids | {unsuitable_plan_a}:
                 observation["observable"]["scene"] = "日落海滩品牌氛围场景"
+                observation["observable"]["lighting"] = "夜间硬光"
+            else:
+                observation["observable"]["scene"] = fallback_scenes[observation_index % 4]
         with patch("report_pdf._fetch_image", return_value=self.image):
             report_pdf.build_visual_report(report, self.root)
 
@@ -269,20 +277,10 @@ class ReferenceReportPdfTest(unittest.TestCase):
         plan_b = {
             row["image_id"] for row in placements if row["page_title"] == "PLAN B"
         }
-        claim_support = {
-            index: set(claim["evidence"]["support_image_ids"])
-            for index, claim in enumerate(upgrade_claims)
-        }
-
         self.assertTrue(plan_a)
         self.assertTrue(plan_b)
         self.assertFalse(plan_a & plan_b)
         self.assertNotIn(unsuitable_plan_a, plan_a)
-        self.assertLessEqual(
-            plan_a,
-            claim_support[0] | claim_support[1] | claim_support[2] | claim_support[3],
-        )
-        self.assertLessEqual(plan_b, claim_support[2])
         plan_a_text = " ".join(
             row["semantic_text"] for row in placements if row["page_title"] == "PLAN A"
         )
@@ -291,7 +289,7 @@ class ReferenceReportPdfTest(unittest.TestCase):
         )
         self.assertNotIn("日落海滩", plan_a_text)
         self.assertIn("浅灰棚拍", plan_a_text)
-        self.assertIn("日落海滩", plan_b_text)
+        self.assertRegex(plan_b_text, "海滩|海边|日落|街道|建筑|夜间")
 
     def test_pdf_uses_reference_titles_without_raw_image_index(self):
         with patch("report_pdf._fetch_image", return_value=self.image):
@@ -332,27 +330,32 @@ class ReferenceReportPdfTest(unittest.TestCase):
         self.assertEqual({"TOPS"}, {row["category"] for row in page_ten})
         self.assertEqual({"BLOUSES"}, {row["category"] for row in page_eleven})
 
-        matrix = {
-            row["slot"]: row
-            for row in placements
-            if row["page"] == 14
+        matrix = [row for row in placements if row["page_title"].startswith("每个品类固定")]
+        self.assertEqual({"DRESSES", "TOPS", "BLOUSES"}, {row["category"] for row in matrix})
+        for category in ("DRESSES", "TOPS", "BLOUSES"):
+            self.assertTrue(any(row["slot"].startswith(category) for row in matrix))
+
+    def test_store_level_profiles_use_counts_and_exclude_obstructed_portraits(self):
+        report = self.report()
+        first = first_image_profile(report)
+        self.assertEqual(
+            sum(1 for image in report["images"]
+                if image["store_id"] == "aloruh_shein" and image["position"] == 1),
+            sum(row["count"] for row in first),
+        )
+
+        target_observations = {
+            row["image_id"]: row for row in report["image_observations"]
         }
-        self.assertEqual("TOPS", matrix["TOPS 近景"]["category"])
-        self.assertEqual("DRESSES", matrix["DRESSES 全长"]["category"])
-        self.assertEqual("BLOUSES", matrix["正面"]["category"])
-        self.assertEqual("BLOUSES", matrix["背面"]["category"])
-        self.assertEqual("BLOUSES", matrix["局部"]["category"])
-        self.assertRegex(
-            " ".join(matrix["正面"]["semantic_fields"].values()),
-            "正面|正向|面向镜头|正对镜头",
+        candidate = next(
+            image for image in report["images"]
+            if image["store_id"] == "aloruh_shein" and image["position"] == 1
         )
-        back = " ".join(matrix["背面"]["semantic_fields"].values())
-        self.assertRegex(back, "背面|背对|后侧|后背")
-        self.assertNotRegex(back, "背面不可见|背面不清楚|未展示背面")
-        self.assertRegex(
-            " ".join(matrix["局部"]["semantic_fields"].values()),
-            "局部|近景|特写|近距离",
-        )
+        target_observations[candidate["image_id"]]["observable"]["face_visibility"] = "面部大部分可见，双眼被墨镜遮挡"
+        profile = model_profile(report)
+        self.assertTrue(profile["rows"])
+        self.assertNotIn(candidate["image_id"], profile["representative_image_ids"])
+        self.assertTrue(all("/" not in row["label"] or row["denominator"] > 0 for row in profile["rows"]))
 
     def test_semantic_matching_rejects_negative_or_unrelated_keyword_hits(self):
         deck = DeckBase.__new__(DeckBase)

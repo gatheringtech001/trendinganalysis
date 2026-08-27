@@ -10,7 +10,7 @@ from server import (
 )
 from report_reviews import REPORT_SECTION_IDS, DetailedReviewStore
 from report_pdf import _approval_summary
-from visual_reports import VisualReportCatalog
+from visual_reports import REPORT_ID, VisualReportCatalog, report_analysis_recency
 
 
 class MatchingAnalysisStore:
@@ -469,7 +469,7 @@ class ResearchStoreTest(unittest.TestCase):
         )
         self.assertEqual([], catalog.list_reports())
         final = {
-            "report_id": "aloruh-visual-diagnostic-2026-08-20",
+            "report_id": REPORT_ID,
             "report_type": "final_visual", "title": "Aloruh 店铺视觉诊断",
             "generated_at": "2026-08-20T00:00:00Z", "sample_count": 2,
             "pages": 8, "sections": [{
@@ -484,7 +484,7 @@ class ResearchStoreTest(unittest.TestCase):
         (pdf_dir / "Aloruh纯视觉诊断-图片结论版.json").write_text(
             json.dumps(final), encoding="utf-8",
         )
-        report = catalog.get("aloruh-visual-diagnostic-2026-08-20")
+        report = catalog.get(REPORT_ID)
 
         self.assertEqual("final_visual", report["report_type"])
         self.assertEqual(2, report["sample_count"])
@@ -493,6 +493,19 @@ class ResearchStoreTest(unittest.TestCase):
                 self.assertIn("derivation", claim)
                 self.assertIn("support_image_ids", claim["evidence"])
                 self.assertIn("counterexample_image_ids", claim["evidence"])
+
+    def test_report_analysis_recency_uses_usage_fallback(self):
+        old_top_level = {
+            "updated_at": "2026-08-20T00:00:00Z",
+            "usage": {"finished_at": "2026-08-20T00:00:00Z"},
+        }
+        imported_new = {
+            "usage": {"finished_at": "2026-08-27T15:56:39Z"},
+        }
+        self.assertGreater(
+            report_analysis_recency(imported_new),
+            report_analysis_recency(old_top_level),
+        )
 
     def test_detailed_review_requires_suggestions_and_all_approvals(self):
         reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
