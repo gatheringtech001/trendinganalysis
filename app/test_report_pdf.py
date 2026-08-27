@@ -10,6 +10,7 @@ from pypdf import PdfReader
 
 import report_pdf
 from report_pdf_layout import DeckBase
+from report_pdf_pages import build_page_sequence
 from visual_reports import PDF_NAME, SOURCE_NOTES_NAME
 
 
@@ -104,10 +105,13 @@ class ReferenceReportPdfTest(unittest.TestCase):
                         framing, pose, garment = "背面中景", "人物背对镜头", "上衣背面结构清楚"
                     else:
                         framing, pose, garment = "正面中近景", "人物正面站立", "正面局部结构清楚"
+                    scene = "浅灰棚拍；休闲日常通勤；浪漫约会；海边度假；夜间派对氛围"
+                    if section_id == "visual_upgrade":
+                        scene = "日落海滩品牌氛围场景" if index == 2 else "浅灰棚拍"
                     observations.append({
                         "image_id": image_id,
                         "observable": {
-                            "scene": "休闲街头、浪漫约会、海边度假、夜间派对",
+                            "scene": scene,
                             "framing": f"头部面部清楚；{framing}",
                             "pose_action": pose,
                             "silhouette": "修身廓形",
@@ -194,25 +198,100 @@ class ReferenceReportPdfTest(unittest.TestCase):
             },
         }
 
-    def test_build_is_fixed_to_reference_53_page_sequence(self):
+    def test_build_uses_content_driven_page_sequence(self):
         report = self.report()
         with patch("report_pdf._fetch_image", return_value=self.image):
             result = report_pdf.build_visual_report(report, self.root)
 
         reader = PdfReader(str(self.root / PDF_NAME))
-        self.assertEqual(53, len(reader.pages))
-        self.assertEqual(53, result["pages"])
+        expected_pages = len(build_page_sequence(report))
+        self.assertEqual(expected_pages, len(reader.pages))
+        self.assertEqual(expected_pages, result["pages"])
         for page in reader.pages:
             self.assertEqual((1920, 1080), (int(page.mediabox.width), int(page.mediabox.height)))
 
         notes = json.loads((self.root / SOURCE_NOTES_NAME).read_text(encoding="utf-8"))
         layout = notes["layout_contract"]
-        self.assertEqual("reference-53-page-v3", layout["version"])
+        self.assertEqual("reference-content-driven-v4", layout["version"])
         self.assertEqual("33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253", layout["reference_sha256"])
         self.assertEqual([[2, "brand_positioning"], [7, "product_display"], [15, "store_visual_audit"], [26, "competitive_gap"], [40, "visual_upgrade"]], layout["section_page_order"])
         expected = [row["image_id"] for row in report["images"]]
         self.assertCountEqual(expected, layout["displayed_evidence_image_ids"])
         self.assertFalse(layout["raw_observation_index"])
+
+    def test_page_sequence_is_not_fixed_to_reference_length(self):
+        report = self.report()
+        full = build_page_sequence(report)
+        report["scope"]["key_category_analysis"]["key_categories"] = report[
+            "scope"
+        ]["key_category_analysis"]["key_categories"][:2]
+
+        reduced = build_page_sequence(report)
+
+        self.assertEqual(len(full) - 1, len(reduced))
+        self.assertEqual(list(range(1, len(reduced) + 1)), [row["page"] for row in reduced])
+        self.assertNotIn(2, [
+            row.get("category_index")
+            for row in reduced
+            if row["kind"] == "category_sample"
+        ])
+
+        short_report = self.report()
+        short_report["sections"][-1]["claims"] = short_report[
+            "sections"
+        ][-1]["claims"][:2]
+        short_sequence = build_page_sequence(short_report)
+        self.assertNotIn("PLAN B", [row["title"] for row in short_sequence])
+        self.assertLess(len(short_sequence), len(full))
+
+    def test_plan_pages_use_disjoint_claim_evidence(self):
+        report = self.report()
+        upgrade_claims = report["sections"][-1]["claims"]
+        neutral_ids = {
+            upgrade_claims[index]["evidence"]["support_image_ids"][0]
+            for index in (1, 3)
+        }
+        atmosphere_ids = {upgrade_claims[2]["evidence"]["support_image_ids"][0]}
+        unsuitable_plan_a = upgrade_claims[0]["evidence"]["support_image_ids"][0]
+        for observation in report["image_observations"]:
+            if observation["image_id"] in neutral_ids:
+                observation["observable"]["scene"] = "浅灰棚拍"
+            elif observation["image_id"] in atmosphere_ids | {unsuitable_plan_a}:
+                observation["observable"]["scene"] = "日落海滩品牌氛围场景"
+        with patch("report_pdf._fetch_image", return_value=self.image):
+            report_pdf.build_visual_report(report, self.root)
+
+        notes = json.loads((self.root / SOURCE_NOTES_NAME).read_text(encoding="utf-8"))
+        placements = notes["layout_contract"]["page_placements"]
+        plan_a = {
+            row["image_id"] for row in placements if row["page_title"] == "PLAN A"
+        }
+        plan_b = {
+            row["image_id"] for row in placements if row["page_title"] == "PLAN B"
+        }
+        claim_support = {
+            index: set(claim["evidence"]["support_image_ids"])
+            for index, claim in enumerate(upgrade_claims)
+        }
+
+        self.assertTrue(plan_a)
+        self.assertTrue(plan_b)
+        self.assertFalse(plan_a & plan_b)
+        self.assertNotIn(unsuitable_plan_a, plan_a)
+        self.assertLessEqual(
+            plan_a,
+            claim_support[0] | claim_support[1] | claim_support[2] | claim_support[3],
+        )
+        self.assertLessEqual(plan_b, claim_support[2])
+        plan_a_text = " ".join(
+            row["semantic_text"] for row in placements if row["page_title"] == "PLAN A"
+        )
+        plan_b_text = " ".join(
+            row["semantic_text"] for row in placements if row["page_title"] == "PLAN B"
+        )
+        self.assertNotIn("日落海滩", plan_a_text)
+        self.assertIn("浅灰棚拍", plan_a_text)
+        self.assertIn("日落海滩", plan_b_text)
 
     def test_pdf_uses_reference_titles_without_raw_image_index(self):
         with patch("report_pdf._fetch_image", return_value=self.image):

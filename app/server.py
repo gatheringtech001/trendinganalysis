@@ -408,8 +408,8 @@ class ReportAnalysisJobs:
             raise ValueError("报告品类范围只支持自动识别重点品类")
         if (not isinstance(key_category_limit, int)
                 or isinstance(key_category_limit, bool)
-                or key_category_limit != 3):
-            raise ValueError("当前53页模板的重点品类数量必须为3")
+                or not 1 <= key_category_limit <= 3):
+            raise ValueError("重点品类数量必须在1到3之间")
         if (not isinstance(sample_per_category, int)
                 or isinstance(sample_per_category, bool)
                 or not 1 <= sample_per_category <= 40):

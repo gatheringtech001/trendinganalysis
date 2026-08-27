@@ -13,12 +13,12 @@ from urllib.parse import urlparse
 from PIL import Image
 
 from report_pdf_editorial import EditorialDeck, PAGE
-from report_pdf_pages import REFERENCE_SEQUENCE, SECTION_PAGE_ORDER
+from report_pdf_pages import REFERENCE_SEQUENCE, section_page_order
 from visual_reports import FINAL_REPORT_NAME, PDF_NAME, REPORT_ID, SOURCE_NOTES_NAME
 
 
 REFERENCE_SHA256 = "33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253"
-LAYOUT_VERSION = "reference-53-page-v3"
+LAYOUT_VERSION = "reference-content-driven-v4"
 
 
 def _shared_cached_image(image, shared_cache_dir):
@@ -115,22 +115,23 @@ def _final_payload(report, generated, pages):
     }
 
 
-def _layout_contract(displayed_ids, page_placements):
+def _layout_contract(displayed_ids, page_placements, page_sequence):
     return {
         "version": LAYOUT_VERSION,
         "reference_sha256": REFERENCE_SHA256,
-        "reference_pages": 53,
+        "reference_template_pages": len(REFERENCE_SEQUENCE),
+        "generated_pages": len(page_sequence),
         "reference_page_size": list(PAGE),
-        "design_language": "53-page black-white image-led reference sequence",
+        "design_language": "content-driven black-white image-led reference sequence",
         "claim_layout": "reference conclusion presentation with store profile, full category distribution, reproducible key-category samples, and visible-only model observations",
         "page_sequence": [
             {
                 "page": spec["page"], "kind": spec["kind"],
                 "section": spec.get("section"), "title": spec["title"],
             }
-            for spec in REFERENCE_SEQUENCE
+            for spec in page_sequence
         ],
-        "section_page_order": [list(item) for item in SECTION_PAGE_ORDER],
+        "section_page_order": [list(item) for item in section_page_order(page_sequence)],
         "displayed_evidence_image_ids": displayed_ids,
         "page_placements": page_placements,
         "raw_observation_index": False,
@@ -151,7 +152,9 @@ def build_visual_report(report, output_dir, progress=lambda _stage, _value: None
         notes = {
             **final,
             "image_failures": [],
-            "layout_contract": _layout_contract(displayed_ids, deck.page_placements),
+            "layout_contract": _layout_contract(
+                displayed_ids, deck.page_placements, deck.page_sequence,
+            ),
             "usage": {
                 "total_tokens": 0,
                 "estimated_cost_usd": 0,

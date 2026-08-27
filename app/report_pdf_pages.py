@@ -4,7 +4,7 @@ REFERENCE_SEQUENCE = [
     {"page": 3, "kind": "store_profile", "section": "brand_positioning", "title": "店铺基本信息", "subtitle": "数据范围与采集边界"},
     {"page": 4, "kind": "category_overview", "section": "brand_positioning", "title": "重点品类", "subtitle": "全量商品结构决定优先分析范围"},
     {"page": 5, "kind": "style_split", "section": "brand_positioning", "title": "重点品类与风格划分", "subtitle": "数据库全量标签分布 + GPT-5.6 Sol 随机样本复核"},
-    {"page": 6, "kind": "mosaic", "section": "brand_positioning", "claim": 2, "title": "CURRENT VISUAL ASSETS", "subtitle": "当前用户感知"},
+    {"page": 6, "kind": "mosaic", "section": "brand_positioning", "claim": 2, "pool_scope": "section", "title": "CURRENT VISUAL ASSETS", "subtitle": "当前用户感知"},
     {"page": 7, "kind": "divider", "section": "product_display", "title": "PRODUCT DISPLAY ANALYSIS"},
     {"page": 8, "kind": "scope", "section": "product_display", "claim": 0, "title": "不是缺少好图，而是缺少可复制的图法系统"},
     {"page": 9, "kind": "category_sample", "section": "product_display", "claim": 0, "category_index": 0, "title": "重点品类随机样本 01"},
@@ -20,7 +20,7 @@ REFERENCE_SEQUENCE = [
     {"page": 19, "kind": "mosaic", "section": "store_visual_audit", "claim": 1, "title": "摄影视觉风格", "subtitle": "同场景同动作重复"},
     {"page": 20, "kind": "mosaic", "section": "store_visual_audit", "claim": 2, "title": "摄影视觉风格", "subtitle": "文字、模板与水印失序"},
     {"page": 21, "kind": "quote", "section": "store_visual_audit", "claim": 1, "title": "统一场景入口，强化首图吸引力，提升店铺浏览效率。"},
-    {"page": 22, "kind": "dense_mosaic", "section": "store_visual_audit", "claim": 0, "title": "First Image Types", "subtitle": "当前首图类型汇总"},
+    {"page": 22, "kind": "dense_mosaic", "section": "store_visual_audit", "claim": 0, "pool_scope": "section", "title": "First Image Types", "subtitle": "当前首图类型汇总"},
     {"page": 23, "kind": "three_compare", "section": "store_visual_audit", "claim": 1, "title": "First Image Types", "subtitle": "动作表达叙事不统一"},
     {"page": 24, "kind": "model_portrait", "section": "store_visual_audit", "claim": 1, "title": "可见模特画像", "subtitle": "只记录画面可见、非敏感属性"},
     {"page": 25, "kind": "three_compare", "section": "store_visual_audit", "claim": 2, "title": "Fabric details & icons", "subtitle": "面料细节及功能信息展示"},
@@ -29,10 +29,10 @@ REFERENCE_SEQUENCE = [
     {"page": 28, "kind": "brand_feature", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "PRINCESS POLLY", "subtitle": "干净电商骨架 + 编辑与生活方式弹性"},
     {"page": 29, "kind": "dense_mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "PRINCESS POLLY", "subtitle": "规模化首图系统"},
     {"page": 30, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "视觉基调：网感与商品可读性平衡", "subtitle": "Visual tone"},
-    {"page": 31, "kind": "dense_mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "Model Faces", "subtitle": "模特面孔"},
-    {"page": 32, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "DAILY 视觉语言", "subtitle": "Model States · DAILY"},
-    {"page": 33, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "PARTY 视觉语言", "subtitle": "Model States · PARTY"},
-    {"page": 34, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "title": "BEACH / VACATION 视觉语言", "subtitle": "Model States · BEACH"},
+    {"page": 31, "kind": "dense_mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "semantic_include_any": ["头部", "面部", "脸"], "title": "Model Faces", "subtitle": "模特面孔"},
+    {"page": 32, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "occasion_tags": ["CASUAL"], "title": "DAILY 视觉语言", "subtitle": "Model States · DAILY"},
+    {"page": 33, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "occasion_tags": ["DATE_NIGHT", "GOING_OUT", "PARTY"], "title": "PARTY 视觉语言", "subtitle": "Model States · PARTY"},
+    {"page": 34, "kind": "mosaic", "section": "competitive_gap", "claim": 0, "store": "princess_polly", "occasion_tags": ["BEACH", "SWIM_COVERUP"], "title": "BEACH / VACATION 视觉语言", "subtitle": "Model States · BEACH"},
     {"page": 35, "kind": "brand_feature", "section": "competitive_gap", "claim": 1, "store": "motel", "title": "MOTEL ROCKS", "subtitle": "高度标准化的中性棚拍体系"},
     {"page": 36, "kind": "mosaic", "section": "competitive_gap", "claim": 1, "store": "motel", "title": "视觉基调：标准化商品摄影", "subtitle": "Visual tone"},
     {"page": 37, "kind": "brand_feature", "section": "competitive_gap", "claim": 2, "store": "prettylittlething", "title": "PRETTYLITTLETHING", "subtitle": "规模化一致性"},
@@ -40,24 +40,65 @@ REFERENCE_SEQUENCE = [
     {"page": 39, "kind": "roadmap", "section": "competitive_gap", "title": "从单张好图升级为分品类主图模板"},
     {"page": 40, "kind": "divider", "section": "visual_upgrade", "title": "VISUAL UPGRADE DIRECTION"},
     {"page": 41, "kind": "brand_feature", "section": "visual_upgrade", "claim": 0, "title": "STANDARDIZED TRY-ON", "subtitle": "标准商品层 + 品牌氛围层"},
-    {"page": 42, "kind": "dense_mosaic", "section": "visual_upgrade", "claim": 0, "title": "ALORUH 视觉系列画像", "subtitle": "出门前的轻性感状态"},
+    {"page": 42, "kind": "dense_mosaic", "section": "visual_upgrade", "claim": 0, "pool_scope": "section", "title": "ALORUH 视觉系列画像", "subtitle": "出门前的轻性感状态"},
     {"page": 43, "kind": "quote", "section": "visual_upgrade", "claim": 0, "title": "从 拍商品 转向 追趋势、做搭配、造氛围"},
     {"page": 44, "kind": "four_series", "section": "visual_upgrade", "claim": 0, "title": "3-1 系列线视觉规划", "subtitle": "VISUAL SERIES"},
     {"page": 45, "kind": "mosaic", "section": "visual_upgrade", "claim": 3, "title": "现有休闲货盘风貌", "subtitle": "有网感，但缺少统一光线、构图与模特状态"},
     {"page": 46, "kind": "mosaic", "section": "visual_upgrade", "claim": 2, "title": "visual tone", "subtitle": "浅暖灰底、统一色温与固定品牌组件"},
     {"page": 47, "kind": "flow", "section": "visual_upgrade", "claim": 3, "title": "用趋势搭配带动氛围首图点击"},
     {"page": 48, "kind": "three_compare", "section": "visual_upgrade", "claim": 0, "title": "网感首图优化对比", "subtitle": "现状 -> 标准商品图 -> 氛围图"},
-    {"page": 49, "kind": "four_compare", "section": "visual_upgrade", "claim": 3, "title": "搭配调整对比", "subtitle": "固定规则，不固定遮挡动作"},
-    {"page": 50, "kind": "grid_compare", "section": "visual_upgrade", "claim": 0, "title": "BEFORE"},
-    {"page": 51, "kind": "grid_compare", "section": "visual_upgrade", "claim": 1, "title": "REFERENCE"},
-    {"page": 52, "kind": "plan", "section": "visual_upgrade", "claim": 2, "title": "PLAN A", "subtitle": "统一商品信息层"},
-    {"page": 53, "kind": "plan", "section": "visual_upgrade", "claim": 3, "title": "PLAN B", "subtitle": "统一品牌氛围层"},
+    {"page": 49, "kind": "four_compare", "section": "visual_upgrade", "claim": 3, "alternating_evidence": True, "title": "搭配调整对比", "subtitle": "固定规则，不固定遮挡动作"},
+    {"page": 50, "kind": "grid_compare", "section": "visual_upgrade", "claim": 0, "evidence": "counter", "title": "BEFORE"},
+    {"page": 51, "kind": "grid_compare", "section": "visual_upgrade", "claim": 1, "evidence": "support", "title": "REFERENCE"},
+    {"page": 52, "kind": "plan", "section": "visual_upgrade", "claim_indices": [0, 1, 2, 3, 4], "include_any": ["棚拍", "纯色", "浅灰", "灰白", "米白", "简洁室内", "柔和均匀"], "exclude_any": ["自拍", "海滩", "街道", "卧室", "咖啡", "日落", "拼接", "暖调", "硬光", "方向光", "投影", "手袋"], "title": "PLAN A", "subtitle": "统一商品信息层"},
+    {"page": 53, "kind": "plan", "section": "visual_upgrade", "claim_indices": [2, 4, 5], "include_any": ["氛围", "海滩", "日落", "街道", "建筑", "夜间", "派对", "直闪", "暖调", "硬光", "投影", "亮片", "手袋", "生活方式", "场景互动"], "title": "PLAN B", "subtitle": "统一品牌氛围层"},
 ]
 
-SECTION_PAGE_ORDER = [
-    (2, "brand_positioning"),
-    (7, "product_display"),
-    (15, "store_visual_audit"),
-    (26, "competitive_gap"),
-    (40, "visual_upgrade"),
-]
+
+def build_page_sequence(report):
+    sections = {section["section_id"]: section for section in report["sections"]}
+    key_categories = report.get("scope", {}).get(
+        "key_category_analysis", {},
+    ).get("key_categories", [])
+    images = {image["image_id"]: image for image in report.get("images", [])}
+    sequence = []
+    for template in REFERENCE_SEQUENCE:
+        section = sections.get(template.get("section"))
+        if template.get("section") and section is None:
+            continue
+        claim_index = template.get("claim")
+        if claim_index is not None and claim_index >= len(section["claims"]):
+            continue
+        claim_indices = template.get("claim_indices")
+        if claim_indices is not None:
+            claim_indices = [
+                index for index in claim_indices if index < len(section["claims"])
+            ]
+            if not claim_indices:
+                continue
+        category_index = template.get("category_index")
+        if category_index is not None and category_index >= len(key_categories):
+            continue
+        store_id = template.get("store")
+        if store_id and claim_index is not None:
+            evidence = section["claims"][claim_index]["evidence"]
+            evidence_ids = (
+                evidence.get("support_image_ids", [])
+                + evidence.get("counterexample_image_ids", [])
+            )
+            if not any(images.get(image_id, {}).get("store_id") == store_id for image_id in evidence_ids):
+                continue
+        spec = dict(template)
+        if claim_indices is not None:
+            spec["claim_indices"] = claim_indices
+        spec["page"] = len(sequence) + 1
+        sequence.append(spec)
+    return sequence
+
+
+def section_page_order(sequence):
+    return [
+        (spec["page"], spec["section"])
+        for spec in sequence
+        if spec["kind"] == "divider"
+    ]

@@ -102,15 +102,10 @@ class EditorialDeck(DeckBase):
         requirements = {"allow_fewer": True}
         if spec.get("store"):
             requirements["scope"] = "store"
-        if spec["page"] == 6:
-            requirements["scope"] = "section"
-        occasion_tags = {
-            32: ["CASUAL"],
-            33: ["DATE_NIGHT", "GOING_OUT", "PARTY"],
-            34: ["BEACH", "SWIM_COVERUP"],
-        }
-        if spec["page"] in occasion_tags:
-            requirements.update({"scope": "store", "tags": occasion_tags[spec["page"]]})
+        if spec.get("pool_scope"):
+            requirements["scope"] = spec["pool_scope"]
+        if spec.get("occasion_tags"):
+            requirements.update({"scope": "store", "tags": spec["occasion_tags"]})
         ids = self._take(spec, 12, requirements)
         self._grid(ids, 50, 55, 1820, 840, min(6, len(ids)), 8)
 
@@ -119,12 +114,12 @@ class EditorialDeck(DeckBase):
         requirements = {"allow_fewer": True}
         if spec.get("store"):
             requirements["scope"] = "store"
-        if spec["page"] in {22, 42}:
-            requirements["scope"] = "section"
-        if spec["page"] == 31:
+        if spec.get("pool_scope"):
+            requirements["scope"] = spec["pool_scope"]
+        if spec.get("semantic_include_any"):
             requirements.update({
                 "scope": "store",
-                "include_any": ["头部", "面部", "脸"],
+                "include_any": spec["semantic_include_any"],
             })
         ids = self._take(spec, 20, requirements)
         self._grid(ids, 50, 45, 1820, 860, min(10, len(ids)), 6)
@@ -285,7 +280,7 @@ class EditorialDeck(DeckBase):
 
     def _draw_four_compare(self, spec):
         self._header(spec)
-        if spec["page"] == 49:
+        if spec.get("alternating_evidence"):
             roles = ["counter", "support", "counter", "support"]
             ids = [self._take(spec, 1, {"evidence": role})[0] for role in roles]
         else:
@@ -391,12 +386,22 @@ class EditorialDeck(DeckBase):
 
     def _draw_grid_compare(self, spec):
         self._text(spec["title"], 30, 1010, 22, 180, INK, True)
-        evidence = "counter" if spec["page"] == 50 else "support"
-        requirements = {"scope": "section", "evidence": evidence}
+        requirements = {"scope": "section", "evidence": spec["evidence"]}
         self._grid(self._take(spec, 8, requirements), 500, 30, 1360, 1000, 4, 10)
 
     def _draw_plan(self, spec):
         self._text(spec["title"], 110, 800, 30, 240, INK, True)
         self._text(spec["subtitle"], 110, 450, 22, 260, STONE, True, max_lines=3)
-        requirements = {"scope": "section", "evidence": "support"}
-        self._grid(self._take(spec, 8, requirements), 390, 35, 1460, 1000, 4, 10)
+        requirements = {
+            "scope": "claims",
+            "evidence": "support",
+            "allow_fewer": True,
+            "allow_repeat": False,
+            "exclude_image_ids": self.plan_used_image_ids,
+            "include_any": spec.get("include_any", []),
+            "exclude_any": spec.get("exclude_any", []),
+        }
+        ids = self._take(spec, 8, requirements)
+        self.plan_used_image_ids.update(ids)
+        columns = 3 if len(ids) in {5, 6} else min(4, len(ids))
+        self._grid(ids, 390, 35, 1460, 1000, columns, 10)

@@ -6,8 +6,8 @@ import { Presentation, PresentationFile } from "@oai/artifact-tool";
 const TMP = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(TMP, "..", "..");
 const ASSETS = path.join(TMP, "assets");
-const RENDERS = path.join(TMP, "renders-v9");
-const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260827-v9-final.pptx");
+const RENDERS = path.join(TMP, "renders-v10");
+const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260827-v10-final.pptx");
 
 const W = 1280;
 const H = 720;
@@ -218,7 +218,7 @@ const p = Presentation.create({ slideSize: { width: W, height: H } });
     { fontSize: 14, typeface: FONT_LATIN, bold: true, color: "#8FD4F2" });
   addText(s, "商铺视觉数据\n如何变成可交付结论", { left: 58, top: 152, width: 480, height: 180 },
     { fontSize: 50, bold: true, color: WHITE });
-  addText(s, "外部数据源 → Aloruh首图15维（竞品12维） → 两种分析工作流 → 53页PDF",
+  addText(s, "外部数据源 → Aloruh首图15维（竞品12维） → 两种分析工作流 → 内容驱动PDF",
     { left: 58, top: 378, width: 480, height: 88 }, { fontSize: 21, color: "#D7D7D7" });
   addRule(s, 58, 532, 440, "#343434", 2);
   addText(s, "COLLECT  /  STANDARDIZE  /  ANALYZE  /  DELIVER",
@@ -226,7 +226,7 @@ const p = Presentation.create({ slideSize: { width: W, height: H } });
     { fontSize: 15, typeface: FONT_LATIN, bold: true, color: "#8FD4F2" });
   addText(s, "Discussion deck · 2026.08.27", { left: 58, top: 636, width: 350, height: 22 },
     { fontSize: 13, typeface: FONT_LATIN, color: "#8D9198" });
-  addText(s, "FINAL DELIVERY / PAGE 53", { left: 600, top: 62, width: 320, height: 20 },
+  addText(s, "FINAL DELIVERY / PLAN B", { left: 600, top: 62, width: 320, height: 20 },
     { fontSize: 13, typeface: FONT_LATIN, bold: true, color: "#8D9198" });
   addBox(s, { left: 586, top: 96, width: 646, height: 548 }, "#1E1E1E", "none", 8);
   await addImage(s, "page-53.jpg", { left: 606, top: 118, width: 606, height: 503 },
@@ -248,7 +248,7 @@ let pageNumber = 2;
     "Shopify /products.json\nAlgolia browse\nWooCommerce Store API\nBrowser Use＋人工验证",
     "统一商品/图片 JSONL\n稳定键＋URL/内容去重\nAloruh 1,782张首图15维\n竞品12维可比分布\nSQLite查询层",
     "体验1：组合筛选＋精读\n体验2：整体分析＋报告\nTerra批量打标 / Sol精读\n报告共享高清缓存与证据",
-    "React 19 + Vite\nPython HTTP API\n五个Section逐章审核\nReportLab/Pillow 53页PDF",
+    "React 19 + Vite\nPython HTTP API\n五个Section逐章审核\nReportLab/Pillow内容驱动PDF",
   ];
   // Arrows are created before nodes so they stay behind the diagram entities.
   for (let i = 0; i < 3; i += 1) {
@@ -1062,9 +1062,9 @@ const experience2Demos = [
   },
   {
     title: "体验2 Demo：五章通过后生成或下载最终PDF", eyebrow: "Layer 3B · demo 5/5",
-    subtitle: "五章通过后，系统只读取同一任务草稿本地排版；最终PDF已按样片版式生成53页。",
+    subtitle: "五章通过后，系统只读取同一任务草稿本地排版；最终PDF沿用样片视觉语言，页数由实际内容决定。",
     imageName: "experience2-step5-final-pdf.png", step: "STEP 05 / 05", summary: "交付最终PDF",
-    details: ["生成、浏览、下载三种动作", "排版0 Token / 0模型费用", "结论与证据进入固定版式"],
+    details: ["生成、浏览、下载三种动作", "排版0 Token / 0模型费用", "结论与证据进入内容驱动版式"],
   },
 ];
 for (const demo of experience2Demos) {
@@ -1082,7 +1082,7 @@ for (const demo of experience2Demos) {
     ["page-14.jpg", "商品展示分析", "P7–14", "三类主分析＋六类交叉验证怎样展示商品？"],
     ["page-22.jpg", "店铺视觉审计", "P15–25", "布景、图法与可见模特哪里失序？"],
     ["page-27.jpg", "竞品视觉差距", "P26–39", "在TOPS与SKIRTS可比范围内差在哪里？"],
-    ["page-44.jpg", "视觉升级方向", "P40–53", "下一步怎么改？"],
+    ["page-44.jpg", "视觉升级方向", "结论页＋PLAN A/B", "下一步怎么改？"],
   ];
   for (let i = 0; i < items.length; i += 1) {
     const x = 48 + i * 238;
@@ -1099,7 +1099,7 @@ for (const demo of experience2Demos) {
   addText(s, "范围与分母清楚 · 图片角色清楚 · 店铺归属清楚 · 结论能够回查到 image_id",
     { left: 280, top: 578, width: 890, height: 30 }, { fontSize: 17, color: MUTED });
   addFooter(s);
-  addNotes(s, [`${sources.repo}/app/report_pdf_pages.py`, `${sources.repo}/output/pdf/Aloruh店铺视觉诊断-白皮书覆盖版-20260827.pdf`]);
+  addNotes(s, [`${sources.repo}/app/report_pdf_pages.py`, `${sources.repo}/output/pdf/Aloruh店铺视觉诊断-内容驱动版-20260827.pdf`]);
 }
 
 // Finished artifact showcase.
@@ -1112,13 +1112,13 @@ for (const demo of experience2Demos) {
   await addImage(s, "page-09.jpg", { left: 48, top: 156, width: 212, height: 119 }, { alt: "Tops visual analysis example" });
   await addImage(s, "page-28.jpg", { left: 276, top: 156, width: 212, height: 119 }, { alt: "Competitor visual system example" });
   await addImage(s, "page-51.jpg", { left: 48, top: 295, width: 440, height: 247 }, { alt: "Final reference board example" });
-  metric(s, "53", "页视觉诊断", 48, 574, 160, true);
+  metric(s, "动态", "页数按内容", 48, 574, 160, true);
   metric(s, "5", "个可审核 Section", 230, 574, 200);
   addText(s, "成品文件", { left: 500, top: 594, width: 120, height: 22 }, { fontSize: 16, bold: true, color: MUTED });
-  addText(s, "Aloruh店铺视觉诊断－白皮书覆盖版－20260827.pdf", { left: 620, top: 588, width: 580, height: 32 },
+  addText(s, "Aloruh店铺视觉诊断－内容驱动版－20260827.pdf", { left: 620, top: 588, width: 580, height: 32 },
     { fontSize: 18, bold: true });
   addFooter(s, "Fashion Scope · final report rendered and visually checked page by page");
-  addNotes(s, [`${sources.repo}/output/pdf/Aloruh店铺视觉诊断-白皮书覆盖版-20260827.pdf`, `${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
+  addNotes(s, [`${sources.repo}/output/pdf/Aloruh店铺视觉诊断-内容驱动版-20260827.pdf`, `${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
 }
 
 // Appendix A1: complete Terra prompt, general rules and dimensions 1–3.

@@ -642,6 +642,11 @@ class ResearchStoreTest(unittest.TestCase):
         self.assertEqual(20, captured["args"].sample_per_category)
         self.assertEqual(created["job_id"], captured["args"].sample_seed)
 
+        flexible_scope = jobs._validate({
+            "category_mode": "auto", "key_category_limit": 2,
+        })
+        self.assertEqual(2, flexible_scope["key_category_limit"])
+
         with self.assertRaisesRegex(ValueError, "重点品类数量"):
             jobs.submit({"category_mode": "auto", "key_category_limit": 0})
         with self.assertRaisesRegex(ValueError, "每个重点品类"):
