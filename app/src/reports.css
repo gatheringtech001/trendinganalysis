@@ -77,6 +77,16 @@
 .source-record-list > strong { display: block; margin-top: 12px; color: var(--ink); font-size: 8px; }
 .evidence-brands { margin: 8px 0; color: var(--muted); font-size: 7px; }
 .legacy-report-notice { margin-bottom: 12px; padding: 12px 16px; border: 1px solid #e0b77b; border-radius: 9px; background: #fff9ef; color: #765321; font-size: 8px; line-height: 1.6; }
+.analysis-scope-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.analysis-scope-cards article { min-width: 0; padding: 17px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+.analysis-scope-cards article > span { color: var(--accent); font-size: 7px; font-weight: 800; letter-spacing: .08em; }
+.analysis-scope-cards h3 { margin: 7px 0 12px; font-size: 13px; }
+.analysis-scope-cards dl { display: grid; gap: 7px; margin: 0; }
+.analysis-scope-cards dl div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; font-size: 8px; }
+.analysis-scope-cards dt { color: var(--muted); }.analysis-scope-cards dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.analysis-scope-cards ol { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.analysis-scope-cards li { display: grid; grid-template-columns: minmax(90px, 1fr) auto auto; gap: 9px; padding: 8px; background: var(--soft); border-radius: 6px; font-size: 7px; }
+.analysis-scope-cards small { display: block; margin-top: 10px; color: var(--muted); font-size: 6px; overflow-wrap: anywhere; }
 .image-observation-appendix { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 9px; }
 .image-observation-appendix > summary { color: var(--accent); cursor: pointer; font-size: 9px; font-weight: 800; }
 .observation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
@@ -135,7 +145,7 @@
   .report-summary { grid-template-columns: 1fr auto; }.report-summary > div:first-child { grid-column: 1 / -1; }
   .report-heatmaps { grid-template-columns: 1fr; }.detailed-report-history { grid-template-columns: 1fr; }
   .detailed-report-history > aside { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-  .generation-usage-audit { grid-template-columns: 1fr; }.claim-evidence-meta { grid-template-columns: repeat(2, 1fr); }
+  .generation-usage-audit, .analysis-scope-cards { grid-template-columns: 1fr; }.claim-evidence-meta { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
   .report-tabs { display: grid; width: 100%; }.report-summary { grid-template-columns: 1fr; gap: 18px; padding: 20px; }

@@ -73,7 +73,12 @@ class ReferenceReportPdfTest(unittest.TestCase):
             for index, claim in enumerate(claims):
                 store = competitor_stores[index] if section_id == "competitive_gap" else "aloruh_shein"
                 for image_id in claim["evidence"]["support_image_ids"] + claim["evidence"]["counterexample_image_ids"]:
-                    category = "SKIRTS" if section_id == "product_display" and index == 1 else "TOPS"
+                    if section_id == "brand_positioning" and index == 0:
+                        category = "DRESSES"
+                    elif section_id == "product_display" and index == 1:
+                        category = "SKIRTS"
+                    else:
+                        category = "TOPS"
                     images.append({
                         "image_id": image_id, "store_id": store,
                         "category": category,
@@ -99,16 +104,49 @@ class ReferenceReportPdfTest(unittest.TestCase):
                             "scene": "休闲街头、浪漫约会、海边度假、夜间派对",
                             "framing": f"头部面部清楚；{framing}",
                             "pose_action": pose,
+                            "silhouette": "修身廓形",
+                            "design_details": "领口与腰线清楚",
+                            "material_texture": "可见细腻纹理",
                             "garment_display": garment,
                             "first_image_type": "模特商品图",
+                            "model_presence": "单人模特",
+                            "face_visibility": "面部完整可见",
+                            "hairstyle": "自然长发",
+                            "makeup_presentation": "自然妆容",
+                            "expression_gaze": "平静直视镜头",
                         },
                     })
         return {
             "scope": {
-                "target_images": 386,
+                "target_images": 60,
                 "competitor_images": 106,
                 "competitor_population_images": 15107,
-                "categories": ["TOPS", "SKIRTS"],
+                "categories": ["DRESSES", "TOPS", "SKIRTS"],
+                "store_profile": {
+                    "store_name": "Aloruh(shein)", "platform": "SHEIN SG",
+                    "product_count": 2560, "image_count": 12000,
+                    "market": "SG", "channel": "browser_assisted",
+                    "data_updated_at": "2026-08-18",
+                },
+                "key_category_analysis": {
+                    "distribution": [
+                        {"category": "DRESSES", "products": 1200, "share": 0.4688},
+                        {"category": "TOPS", "products": 760, "share": 0.2969},
+                        {"category": "SKIRTS", "products": 340, "share": 0.1328},
+                    ],
+                    "key_categories": [
+                        {"category": "DRESSES", "population_products": 1200, "sample_selected": 20},
+                        {"category": "TOPS", "population_products": 760, "sample_selected": 20},
+                        {"category": "SKIRTS", "population_products": 340, "sample_selected": 20},
+                    ],
+                    "sampling": {"method": "deterministic_random", "seed": "analysis-one", "sample_per_category": 20},
+                    "dimension_distributions": {
+                        "visual_language": [
+                            {"tag": "ECOMMERCE_CLEAN", "images": 36, "share": 0.6},
+                            {"tag": "LIFESTYLE", "images": 24, "share": 0.4},
+                        ],
+                    },
+                },
                 "excluded_metrics": ["CTR", "销量"],
             },
             "executive_summary": ["结论一", "结论二"],
@@ -136,7 +174,7 @@ class ReferenceReportPdfTest(unittest.TestCase):
 
         notes = json.loads((self.root / SOURCE_NOTES_NAME).read_text(encoding="utf-8"))
         layout = notes["layout_contract"]
-        self.assertEqual("reference-53-page-v1", layout["version"])
+        self.assertEqual("reference-53-page-v2", layout["version"])
         self.assertEqual("33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253", layout["reference_sha256"])
         self.assertEqual([[2, "brand_positioning"], [7, "product_display"], [15, "store_visual_audit"], [26, "competitive_gap"], [40, "visual_upgrade"]], layout["section_page_order"])
         expected = [row["image_id"] for row in report["images"]]
@@ -150,6 +188,9 @@ class ReferenceReportPdfTest(unittest.TestCase):
         text = "\n".join((page.extract_text() or "") for page in PdfReader(str(self.root / PDF_NAME)).pages)
         self.assertIn("Positioning", text)
         self.assertIn("Calibration", text)
+        self.assertIn("店铺基本信息", text)
+        self.assertIn("重点品类", text)
+        self.assertIn("可见模特画像", text)
         self.assertIn("PRODUCT\nDISPLAY\nANALYSIS", text)
         self.assertIn("STORE\nVISUAL\nAUDIT", text)
         self.assertIn("Discrepancy", text)
@@ -165,10 +206,13 @@ class ReferenceReportPdfTest(unittest.TestCase):
         placements = notes["layout_contract"]["page_placements"]
         page_nine = [row for row in placements if row["page"] == 9]
         page_ten = [row for row in placements if row["page"] == 10]
+        page_eleven = [row for row in placements if row["page"] == 11]
         self.assertTrue(page_nine)
         self.assertTrue(page_ten)
-        self.assertEqual({"TOPS"}, {row["category"] for row in page_nine})
-        self.assertEqual({"SKIRTS"}, {row["category"] for row in page_ten})
+        self.assertTrue(page_eleven)
+        self.assertEqual({"DRESSES"}, {row["category"] for row in page_nine})
+        self.assertEqual({"TOPS"}, {row["category"] for row in page_ten})
+        self.assertEqual({"SKIRTS"}, {row["category"] for row in page_eleven})
 
         matrix = {
             row["slot"]: row

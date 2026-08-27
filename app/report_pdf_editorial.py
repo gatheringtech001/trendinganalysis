@@ -20,6 +20,69 @@ class EditorialDeck(DeckBase):
         self._text("allure / aura / soft sensuality", 650, 625, 22, 750, STONE)
         self._text(claim["conclusion"], 390, 450, 22, 1160, INK, max_lines=4)
 
+    def _key_analysis(self):
+        analysis = self.report.get("scope", {}).get("key_category_analysis")
+        if not analysis:
+            raise ValueError("PDF缺少重点品类分析范围")
+        return analysis
+
+    def _draw_store_profile(self, spec):
+        self._header(spec)
+        profile = self.report.get("scope", {}).get("store_profile") or {}
+        metrics = [
+            ("店铺", profile.get("store_name")),
+            ("平台 / 市场", " / ".join(filter(None, [profile.get("platform"), profile.get("market")]))),
+            ("商品总数", f"{int(profile.get('product_count') or 0):,}"),
+            ("图片索引", f"{int(profile.get('image_count') or 0):,}"),
+            ("品类数量", str(profile.get("category_count") or "—")),
+            ("数据更新时间", str(profile.get("data_updated_at") or "未记录")[:19]),
+        ]
+        for index, (label, value) in enumerate(metrics):
+            x = 70 + (index % 3) * 600
+            y = 760 - (index // 3) * 330
+            self.canvas.setFillColor(PAPER)
+            self.canvas.roundRect(x, y - 185, 550, 235, 12, fill=1, stroke=0)
+            self._text(label, x + 30, y, 17, 480, STONE, True)
+            self._text(value or "未记录", x + 30, y - 78, 31, 480, INK, True, max_lines=2)
+
+    def _draw_category_overview(self, spec):
+        self._header(spec)
+        rows = self._key_analysis().get("distribution", [])[:8]
+        if not rows:
+            raise ValueError("PDF缺少全量品类分布")
+        maximum = max(row["products"] for row in rows)
+        key_names = {
+            row["category"] for row in self._key_analysis().get("key_categories", [])
+        }
+        for index, row in enumerate(rows):
+            y = 835 - index * 96
+            self._text(row["category"], 70, y, 18, 300, INK, row["category"] in key_names)
+            self.canvas.setFillColor(SAND if row["category"] in key_names else PAPER)
+            self.canvas.roundRect(390, y - 4, 1120 * row["products"] / maximum, 30, 8, fill=1, stroke=0)
+            self._text(f"{row['products']:,} · {row.get('share', 0):.1%}", 1540, y, 18, 300, STONE, True)
+
+    def _dimension_values(self, dimension):
+        raw = self._key_analysis().get("dimension_distributions", {}).get(dimension, [])
+        return raw.get("values", []) if isinstance(raw, dict) else raw
+
+    def _draw_style_split(self, spec):
+        self._header(spec)
+        categories = self._key_analysis().get("key_categories", [])
+        for index, row in enumerate(categories[:3]):
+            x = 55 + index * 610
+            image_id = self._take(spec, 1, {
+                "scope": "store", "category": row["category"],
+            })[0]
+            self._photo(image_id, x, 300, 560, 570, slot=row["category"])
+            self._text(row["category"], x, 245, 22, 560, INK, True)
+            self._text(
+                f"全量 {row['population_products']:,} 件 · 随机复核 {row['sample_selected']} 张",
+                x, 200, 15, 560, STONE,
+            )
+        tags = self._dimension_values("visual_language")[:4]
+        summary = " / ".join(row["tag"] for row in tags) or "风格标签覆盖不足，以随机样本视觉观察为准"
+        self._text(f"视觉语言：{summary}", 55, 105, 17, 1780, STONE, max_lines=2)
+
     def _draw_dark_collage(self, spec):
         self._grid(self._take(spec, 8), 565, 80, 1305, 920, 4, 8, .12)
         self._text(spec["title"], 50, 990, 22, 450, WHITE, True, max_lines=2)
@@ -63,19 +126,33 @@ class EditorialDeck(DeckBase):
         self._grid(self._take(spec, 9), 790, 0, 1130, 1080, 3, 6, .25)
         self._text(spec["title"], 50, 990, 34, 660, WHITE, True, max_lines=4)
         self._text(self._body(spec), 50, 790, 19, 650, SAND, max_lines=7)
-        metrics = [(scope["target_images"], "ALORUH 全量目标图"), (len(self.report["image_observations"]), "逐图观察"), (scope["competitor_population_images"], "竞品全量分母")]
+        metrics = [(scope["target_images"], "ALORUH 重点品类随机样本"), (len(self.report["image_observations"]), "逐图观察"), (scope["competitor_population_images"], "竞品12维可比分母")]
         for index, (value, label) in enumerate(metrics):
             y = 430 - index * 110
             self._text(f"{value:,}", 50, y, 42, 250, WHITE, True)
             self._text(label, 285, y - 2, 16, 360, SAND)
 
-    def _draw_hero_collage(self, spec):
-        category = "TOPS" if spec["page"] == 9 else "SKIRTS"
-        ids = self._take(spec, 10, {"category": category})
+    def _draw_category_sample(self, spec):
+        analysis = self._key_analysis()
+        categories = analysis.get("key_categories", [])
+        index = spec.get("category_index", 0)
+        if index >= len(categories):
+            raise ValueError(f"PDF缺少第 {index + 1} 个重点品类")
+        row = categories[index]
+        category = row["category"]
+        ids = self._take(spec, 10, {
+            "scope": "store", "category": category, "allow_fewer": True,
+        })
         self._grid(ids, 0, 0, 1920, 1080, 5, 0, .08)
         self.canvas.setFillColorRGB(0, 0, 0, alpha=.65)
         self.canvas.rect(0, 0, 690, 1080, fill=1, stroke=0)
-        self._text(spec["title"], 52, 920, 30, 570, WHITE, True, max_lines=4)
+        self._text(category, 52, 920, 42, 570, WHITE, True, max_lines=2)
+        sampling = analysis.get("sampling", {})
+        self._text(
+            f"全量 {row['population_products']:,} 件 · 随机抽取 {row['sample_selected']} 张\n"
+            f"复现种子 {sampling.get('seed', '未记录')}",
+            52, 815, 17, 570, SAND, max_lines=3,
+        )
         self._text(self._body(spec), 52, 700, 18, 560, WHITE, max_lines=8)
 
     def _draw_method(self, spec):
@@ -110,9 +187,15 @@ class EditorialDeck(DeckBase):
 
     def _draw_matrix(self, spec):
         self._header(spec)
+        categories = [
+            row["category"] for row in self._key_analysis().get("key_categories", [])
+        ]
+        near_category = "TOPS" if "TOPS" in categories else categories[0]
+        full_candidates = [row for row in categories if row != near_category]
+        full_category = "SKIRTS" if "SKIRTS" in full_candidates else full_candidates[0]
         slots = [
-            ({**spec, "claim": 0}, {"category": "TOPS", "include_any": ["近景", "近距离", "躯干", "上半身"]}, "TOPS 近景"),
-            ({**spec, "claim": 1}, {"category": "SKIRTS", "include_groups": [["全长", "全身", "腰头"], ["下摆", "完整"]]}, "SKIRTS 全长"),
+            ({**spec, "claim": 0}, {"scope": "store", "category": near_category, "include_any": ["近景", "近距离", "躯干", "上半身"]}, f"{near_category} 近景"),
+            ({**spec, "claim": 1}, {"scope": "store", "category": full_category, "include_groups": [["全长", "全身", "腰头"], ["下摆", "完整"]]}, f"{full_category} 全长"),
             ({**spec, "claim": 2}, {"evidence": "support", "include_any": ["正面"]}, "正面"),
             ({**spec, "claim": 2}, {"evidence": "counter", "include_any": ["背面", "背对", "背身"]}, "背面"),
             ({**spec, "claim": 2}, {"evidence": "support", "include_any": ["局部", "近景", "特写", "近距离"]}, "局部"),
@@ -124,6 +207,37 @@ class EditorialDeck(DeckBase):
             self._text(label, x, 315, 18, 330, INK, True)
             self._text("构图 / 动作 / 卖点 / 场景", x, 265, 14, 330, STONE)
         self._text(self._body(spec), 50, 145, 21, 1780, INK, max_lines=3)
+
+    def _draw_model_portrait(self, spec):
+        self._header(spec)
+        fields = (
+            "model_presence", "face_visibility", "hairstyle",
+            "makeup_presentation", "expression_gaze",
+        )
+        ids = []
+        for image_id, observation in self.observations.items():
+            if self.images.get(image_id, {}).get("store_id") != "aloruh_shein":
+                continue
+            values = [observation.get("observable", {}).get(field) for field in fields]
+            if any(value and "不可观察" not in value for value in values):
+                ids.append(image_id)
+        if not ids:
+            raise ValueError("可见模特画像没有可复核图片")
+        self._grid(ids[:8], 55, 390, 1160, 500, min(4, len(ids)), 8)
+        labels = {
+            "model_presence": "模特在场", "face_visibility": "面部可见性",
+            "hairstyle": "可见发型", "makeup_presentation": "可见妆容",
+            "expression_gaze": "表情与视线",
+        }
+        for index, field in enumerate(fields):
+            values = []
+            for image_id in ids:
+                value = self.observations[image_id].get("observable", {}).get(field)
+                if value and value not in values:
+                    values.append(value)
+            self._text(labels[field], 1280, 855 - index * 150, 16, 530, STONE, True)
+            self._text(" / ".join(values[:3]) or "不可观察", 1280, 805 - index * 150, 19, 560, INK, max_lines=3)
+        self._text("不推断年龄、种族、国籍、身高、体型尺寸、健康或吸引力。", 55, 90, 16, 1800, STONE)
 
     def _draw_logic(self, spec):
         self._header(spec)

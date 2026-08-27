@@ -24,6 +24,13 @@ class ReportAnalysisModelTest(unittest.TestCase):
             ["i1", "i2"],
             observations["items"]["properties"]["image_id"]["enum"],
         )
+        visible = observations["items"]["properties"]["observable"]
+        self.assertIn("silhouette", visible["required"])
+        self.assertIn("design_details", visible["required"])
+        self.assertIn("material_texture", visible["required"])
+        self.assertIn("hairstyle", visible["required"])
+        self.assertIn("makeup_presentation", visible["required"])
+        self.assertIn("face_visibility", visible["required"])
 
     def test_report_schema_uses_the_five_reference_pdf_sections(self):
         schema = report_schema()["schema"]
@@ -44,7 +51,7 @@ class ReportAnalysisModelTest(unittest.TestCase):
 
         target = [row for row in rows if row["role"] == "target"]
         competitor = [row for row in rows if row["role"] == "competitor"]
-        self.assertEqual(2, len(target))
+        self.assertEqual(8, len(target))
         self.assertEqual(
             sum(row["selected_images"] for row in plan["stores"].values()),
             len(competitor),
@@ -68,6 +75,65 @@ class ReportAnalysisModelTest(unittest.TestCase):
             reason.get("selection_lens") == "combined_visual_cluster"
             for row in competitor for reason in row["selection_reasons"]
         ))
+
+    def test_auto_scope_builds_store_profile_and_reproducible_key_category_samples(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            db_path = Path(temporary) / "selection.db"
+            self._build_selection_database(db_path)
+
+            first, plan = _select_rows(
+                db_path, "aloruh_shein", None,
+                key_category_limit=3, sample_per_category=2,
+                sample_seed="report-seed",
+            )
+            second, repeated = _select_rows(
+                db_path, "aloruh_shein", None,
+                key_category_limit=3, sample_per_category=2,
+                sample_seed="report-seed",
+            )
+
+        target = [row for row in first if row["role"] == "target"]
+        self.assertEqual(
+            ["DRESSES", "TOPS", "SKIRTS"],
+            [row["category"] for row in plan["target"]["key_categories"]],
+        )
+        self.assertEqual(6, len(target))
+        self.assertEqual(
+            [row["product_id"] for row in target],
+            [row["product_id"] for row in second if row["role"] == "target"],
+        )
+        self.assertEqual(plan["target"], repeated["target"])
+        self.assertEqual("Aloruh(shein)", plan["target"]["store_profile"]["store_name"])
+        self.assertEqual(12, plan["target"]["store_profile"]["product_count"])
+        self.assertEqual(12, plan["target"]["store_profile"]["image_count"])
+        self.assertEqual("deterministic_random", plan["target"]["sampling"]["method"])
+        self.assertTrue(all(
+            row["selection_reasons"][0]["evidence_role"] == "key_category_random_sample"
+            for row in target
+        ))
+
+    def test_competitor_category_without_dimension_tags_is_reported_not_inferred(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            db_path = Path(temporary) / "selection.db"
+            self._build_selection_database(db_path)
+            connection = sqlite3.connect(db_path)
+            connection.execute(
+                "DELETE FROM image_analysis_tags WHERE store_id=? AND product_id LIKE ?",
+                ("princess_polly", "princess_polly-dresses-%"),
+            )
+            connection.commit()
+            connection.close()
+
+            _rows, plan = _select_rows(
+                db_path, "aloruh_shein", None,
+                key_category_limit=3, sample_per_category=2,
+                sample_seed="coverage-seed",
+            )
+
+        dresses = plan["stores"]["princess_polly"]["categories"]["DRESSES"]
+        self.assertEqual("dimension_tags_unavailable", dresses["status"])
+        self.assertEqual(0, dresses["analyzed_images"])
+        self.assertGreater(plan["stores"]["princess_polly"]["selected_images"], 0)
 
     def test_competitor_evidence_rejects_incomplete_dimension_coverage(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -130,10 +196,15 @@ class ReportAnalysisModelTest(unittest.TestCase):
             );
         """)
         stores = ("princess_polly", "motel", "prettylittlething")
-        products = [("aloruh_shein", "target-top", "TOPS", 1),
-                    ("aloruh_shein", "target-skirt", "SKIRTS", 2)]
+        products = []
+        for category, base_rank in (("DRESSES", 0), ("TOPS", 10), ("SKIRTS", 20)):
+            for index in range(1, 5):
+                products.append((
+                    "aloruh_shein", f"target-{category.lower()}-{index}",
+                    category, base_rank + index,
+                ))
         for store in stores:
-            for category in ("TOPS", "SKIRTS"):
+            for category in ("DRESSES", "TOPS", "SKIRTS"):
                 for index in range(1, 5):
                     products.append((store, f"{store}-{category.lower()}-{index}", category, index))
         for store, product_id, category, rank in products:

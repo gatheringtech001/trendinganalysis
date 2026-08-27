@@ -18,7 +18,7 @@ from visual_reports import FINAL_REPORT_NAME, PDF_NAME, REPORT_ID, SOURCE_NOTES_
 
 
 REFERENCE_SHA256 = "33dcf787c9fb88ecdcd2af95add94610755b3c7aae336a21b7db4712cfcec253"
-LAYOUT_VERSION = "reference-53-page-v1"
+LAYOUT_VERSION = "reference-53-page-v2"
 
 
 def _shared_cached_image(image, shared_cache_dir):
@@ -121,7 +121,7 @@ def _layout_contract(displayed_ids, page_placements):
         "reference_pages": 53,
         "reference_page_size": list(PAGE),
         "design_language": "53-page black-white image-led reference sequence",
-        "claim_layout": "reference page-for-page conclusion presentation",
+        "claim_layout": "reference conclusion presentation with store profile, full category distribution, reproducible key-category samples, and visible-only model observations",
         "page_sequence": [
             {
                 "page": spec["page"], "kind": spec["kind"],

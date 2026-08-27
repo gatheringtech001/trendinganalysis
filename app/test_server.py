@@ -575,6 +575,7 @@ class ResearchStoreTest(unittest.TestCase):
     def test_report_analysis_requires_explicit_start_and_reanalyzes_rejected_section(self):
         root = Path(self.temp.name) / "report-analysis"
         reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
+        captured = {}
 
         class FakeCatalog:
             @staticmethod
@@ -586,6 +587,7 @@ class ResearchStoreTest(unittest.TestCase):
                 return None
 
         def fake_runner(args, progress):
+            captured["args"] = args
             progress("analyzing_all_images", 70)
             args.output.mkdir(parents=True, exist_ok=True)
             result = {
@@ -621,7 +623,14 @@ class ResearchStoreTest(unittest.TestCase):
             runner=fake_runner, revision_runner=fake_revision,
         )
         self.assertEqual([], jobs.list())
-        created = jobs.submit({})
+        created = jobs.submit({
+            "target_store": "aloruh_shein", "category_mode": "auto",
+            "key_category_limit": 3, "sample_per_category": 20,
+        })
+        self.assertEqual("auto", created["scope"]["category_mode"])
+        self.assertEqual(3, created["scope"]["key_category_limit"])
+        self.assertEqual(20, created["scope"]["sample_per_category"])
+        self.assertEqual(created["job_id"], created["scope"]["sampling_seed"])
         deadline = time.time() + 2
         status = jobs.get(created["job_id"])
         while status["status"] not in {"complete", "failed"} and time.time() < deadline:
@@ -629,6 +638,14 @@ class ResearchStoreTest(unittest.TestCase):
             status = jobs.get(created["job_id"])
         self.assertEqual("complete", status["status"])
         self.assertEqual(100, status["usage"]["total_tokens"])
+        self.assertEqual(3, captured["args"].key_category_limit)
+        self.assertEqual(20, captured["args"].sample_per_category)
+        self.assertEqual(created["job_id"], captured["args"].sample_seed)
+
+        with self.assertRaisesRegex(ValueError, "重点品类数量"):
+            jobs.submit({"category_mode": "auto", "key_category_limit": 0})
+        with self.assertRaisesRegex(ValueError, "每个重点品类"):
+            jobs.submit({"category_mode": "auto", "sample_per_category": 41})
 
         revised = jobs.revise(
             created["job_id"], REPORT_SECTION_IDS[0], "结论需要更多反例",

@@ -25,6 +25,12 @@ SECTION_TITLES = {
     "competitive_gap": "竞品视觉差距",
     "visual_upgrade": "视觉升级方向",
 }
+OBSERVABLE_FIELDS = (
+    "scene", "framing", "pose_action", "lighting", "palette", "styling",
+    "silhouette", "design_details", "material_texture", "garment_display",
+    "first_image_type", "brand_signal", "text_overlay", "model_presence",
+    "face_visibility", "hairstyle", "makeup_presentation", "expression_gaze",
+)
 
 
 def _strings(max_items=8, min_items=1):
@@ -36,11 +42,7 @@ def _strings(max_items=8, min_items=1):
 
 def observation_schema(image_ids: list[str]) -> dict:
     observable = {
-        name: {"type": "string"} for name in (
-            "scene", "framing", "pose_action", "lighting", "palette",
-            "styling", "garment_display", "first_image_type", "brand_signal",
-            "text_overlay",
-        )
+        name: {"type": "string"} for name in OBSERVABLE_FIELDS
     }
     observation = {
         "type": "object",
@@ -287,7 +289,11 @@ class AzureOpenAIReportAnalyzer:
             "你是女装品牌视觉诊断分析师。逐张分析高清商品图，先记录肉眼可见事实，再写优缺点。"
             "不得使用销量、曝光、点击、转化或ROI，不得推断敏感属性。旧分类标签仅是上下文，"
             "不能替代本次观察。证据线索必须能在图片中复核。竞品图只用于对照，不代表目标店铺。"
-            "竞品图由全量视觉维度分布分层选出；selection_reasons说明其典型或边界证据角色。"
+            "竞品图只从已完成12维标签覆盖的可比品类全量分布中分层选出；"
+            "未覆盖品类不得推断。selection_reasons说明其典型或边界证据角色。"
+            "模特相关字段只记录实际可见的在场人数、面部可见性、发型、妆容表现、表情和视线；"
+            "不可见时写不可观察。禁止推断年龄、种族、国籍、身高、体型尺寸、健康或吸引力。"
+            "产品字段要分别记录廓形、可见设计细节、可见材质纹理和商品展示完整度。"
         )
 
     @staticmethod
@@ -302,5 +308,10 @@ class AzureOpenAIReportAnalyzer:
             "competitive_gap必须分别包含Princess Polly、Motel Rocks、PrettyLittleThing三家品牌，"
             "每家至少一条独立结论；结论或推导必须写出品牌名，支持图或代表图必须来自该品牌。"
             "不得写销售、流量、点击、转化或ROI结论。五个章节必须各出现一次："
-            f"{roles}。范围：{json.dumps(scope, ensure_ascii=False)}"
+            f"{roles}。brand_positioning必须说明店铺基本信息、全量重点品类和风格划分；"
+            "product_display必须分别分析每个重点品类的可复现随机样本，并覆盖卖点、动作和搭配；"
+            "store_visual_audit必须覆盖拍摄布景、拍摄风格及仅限可见属性的模特画像；"
+            "competitive_gap只比较当前采集的三家竞品，并保持逐品牌证据隔离；"
+            "visual_upgrade必须回指前四章证据。人群画像和代表红人不在分析范围内。"
+            f"范围：{json.dumps(scope, ensure_ascii=False)}"
         )

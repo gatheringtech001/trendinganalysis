@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import random
 import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,7 +11,7 @@ from types import SimpleNamespace
 from analysis_usage import AnalysisUsageRecorder, SOL_STANDARD_PRICING
 from azure_openai_fashion_analyzer import AzureOpenAIOptions
 from high_resolution_images import download_high_resolution_image
-from report_analysis_model import AzureOpenAIReportAnalyzer, SECTION_IDS
+from report_analysis_model import AzureOpenAIReportAnalyzer, OBSERVABLE_FIELDS, SECTION_IDS
 
 
 COMPETITOR_STORES = ("princess_polly", "motel", "prettylittlething")
@@ -21,8 +22,11 @@ COMPETITOR_BRANDS = {
 }
 BATCH_SIZE = 8
 SELECTION_DIMENSIONS = (
-    "occasion", "scene", "composition", "view_action", "visual_language", "styling",
+    "product_category", "silhouette_fit", "design_elements", "material_texture",
+    "occasion", "color_pattern", "composition", "view_action", "selling_points",
+    "scene", "visual_language", "styling",
 )
+STORE_NAMES = {"aloruh_shein": "Aloruh(shein)", **COMPETITOR_BRANDS}
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -45,15 +49,41 @@ def _image_id(row: dict) -> str:
 
 
 def _select_rows(
-    db_path: Path, target_store: str, categories: list[str],
+    db_path: Path, target_store: str, categories: list[str] | None = None,
+    key_category_limit: int = 3, sample_per_category: int = 20,
+    sample_seed: str = "report-analysis",
 ) -> tuple[list[dict], dict]:
     connection = sqlite3.connect(f"file:{db_path.as_posix()}?mode=ro&immutable=1", uri=True)
     connection.row_factory = sqlite3.Row
     try:
-        target = _catalog_rows(connection, target_store, categories)
+        distribution = _category_distribution(connection, target_store)
+        selected_categories = categories or [
+            row["category"] for row in distribution[:key_category_limit]
+        ]
+        if not selected_categories:
+            raise ValueError("report scope contains no target categories")
+        target, key_categories = _select_target_samples(
+            connection, target_store, selected_categories,
+            sample_per_category, sample_seed,
+            {row["category"]: row["products"] for row in distribution},
+        )
+        target_plan = {
+            "store_profile": _store_profile(connection, target_store),
+            "distribution": distribution,
+            "key_categories": key_categories,
+            "sampling": {
+                "method": "deterministic_random", "seed": sample_seed,
+                "sample_per_category": sample_per_category,
+            },
+            "dimension_distributions": _store_dimension_distributions(
+                connection, target_store,
+            ),
+        }
         competitors, stores = [], {}
         for store in COMPETITOR_STORES:
-            selected, plan = _select_store_evidence(connection, store, categories)
+            selected, plan = _select_store_evidence(
+                connection, store, selected_categories,
+            )
             competitors.extend(selected)
             stores[store] = plan
     finally:
@@ -65,7 +95,7 @@ def _select_rows(
             if row["source_url"] in seen:
                 continue
             seen.add(row["source_url"])
-            reasons = row.get("selection_reasons") or [{"evidence_role": "full_target"}]
+            reasons = row.get("selection_reasons") or [{"evidence_role": "unclassified"}]
             result.append({
                 **row, "image_id": _image_id(row), "role": role,
                 "selection_reasons": reasons,
@@ -74,8 +104,105 @@ def _select_rows(
         raise ValueError("report scope contains no target cover images")
     return result, {
         "method": "dimension_stratified", "dimensions": list(SELECTION_DIMENSIONS),
-        "stores": stores,
+        "target": target_plan, "stores": stores,
     }
+
+
+def _table_columns(connection, table: str) -> set[str]:
+    return {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
+
+
+def _store_profile(connection, store: str) -> dict:
+    columns = _table_columns(connection, "products")
+    optional = [
+        name for name in ("market", "channel", "source_type", "retrieved_at")
+        if name in columns
+    ]
+    selects = ["COUNT(*) AS product_count"]
+    for name in optional:
+        aggregate = "MAX" if name == "retrieved_at" else "MIN"
+        selects.append(f"{aggregate}({name}) AS {name}")
+    row = dict(connection.execute(
+        f"SELECT {', '.join(selects)} FROM products WHERE store_id=?", (store,),
+    ).fetchone())
+    image_count = connection.execute(
+        "SELECT COUNT(*) FROM images WHERE store_id=?", (store,),
+    ).fetchone()[0]
+    category_count = connection.execute(
+        "SELECT COUNT(DISTINCT category_group) FROM products WHERE store_id=?", (store,),
+    ).fetchone()[0]
+    return {
+        "store_id": store, "store_name": STORE_NAMES.get(store, store),
+        "platform": "SHEIN SG" if store == "aloruh_shein" else row.get("source_type"),
+        "product_count": row["product_count"], "image_count": image_count,
+        "category_count": category_count, "market": row.get("market"),
+        "channel": row.get("channel"), "data_updated_at": row.get("retrieved_at"),
+    }
+
+
+def _category_distribution(connection, store: str) -> list[dict]:
+    rows = [dict(row) for row in connection.execute(
+        "SELECT category_group AS category, COUNT(*) AS products, "
+        "MIN(COALESCE(catalog_rank, 999999999)) AS first_rank "
+        "FROM products WHERE store_id=? GROUP BY category_group "
+        "ORDER BY products DESC, first_rank, category_group", (store,),
+    )]
+    total = sum(row["products"] for row in rows)
+    for row in rows:
+        row.pop("first_rank", None)
+        row["share"] = round(row["products"] / total, 4) if total else 0
+    return rows
+
+
+def _select_target_samples(
+    connection, store: str, categories: list[str],
+    sample_per_category: int, seed: str, populations: dict[str, int],
+) -> tuple[list[dict], list[dict]]:
+    selected, plans = [], []
+    for category in categories:
+        rows = _catalog_rows(connection, store, [category])
+        rng = random.Random(f"{seed}:{category}")
+        sampled = rng.sample(rows, min(sample_per_category, len(rows)))
+        reason = {
+            "evidence_role": "key_category_random_sample", "category": category,
+            "population_products": populations.get(category, 0),
+            "eligible_cover_images": len(rows), "seed": seed,
+        }
+        selected.extend({**row, "selection_reasons": [reason]} for row in sampled)
+        plans.append({
+            "category": category,
+            "population_products": populations.get(category, 0),
+            "eligible_cover_images": len(rows),
+            "sample_selected": len(sampled),
+        })
+    return selected, plans
+
+
+def _store_dimension_distributions(connection, store: str) -> dict:
+    total = connection.execute(
+        "SELECT COUNT(*) FROM products WHERE store_id=?", (store,),
+    ).fetchone()[0]
+    result = {}
+    for dimension in SELECTION_DIMENSIONS:
+        rows = [dict(row) for row in connection.execute(
+            "SELECT t.tag, COUNT(DISTINCT t.product_id) AS images "
+            "FROM image_analysis_tags t WHERE t.store_id=? AND t.position=1 "
+            "AND t.dimension=? GROUP BY t.tag ORDER BY images DESC, t.tag LIMIT 12",
+            (store, dimension),
+        )]
+        analyzed = connection.execute(
+            "SELECT COUNT(DISTINCT product_id) FROM image_analysis_tags "
+            "WHERE store_id=? AND position=1 AND dimension=?", (store, dimension),
+        ).fetchone()[0]
+        for row in rows:
+            row["share"] = round(row["images"] / analyzed, 4) if analyzed else 0
+        result[dimension] = {
+            "analyzed_products": analyzed,
+            "population_products": total,
+            "coverage": round(analyzed / total, 4) if total else 0,
+            "values": rows,
+        }
+    return result
 
 
 def _catalog_rows(connection, store: str, categories: list[str]) -> list[dict]:
@@ -192,11 +319,12 @@ def _select_cluster_evidence(rows: list[dict], index: dict, selected: dict) -> l
     minimum_boundary = max(1, round(len(rows) * 0.005))
     boundary_pool = [group for group in ordered if len(group["members"]) >= minimum_boundary]
     evidence_groups = [("typical", group) for group in ordered[:2]]
-    evidence_groups.append(("boundary", min(
-        boundary_pool, key=lambda group: (
-            len(group["members"]), tuple(group["signature"].items()),
-        ),
-    )))
+    if boundary_pool:
+        evidence_groups.append(("boundary", min(
+            boundary_pool, key=lambda group: (
+                len(group["members"]), tuple(group["signature"].items()),
+            ),
+        )))
     for evidence_role, group in evidence_groups:
         row = min(group["members"], key=lambda item: (
             -item[0], item[1].get("catalog_rank") or 10**9, item[1]["product_id"],
@@ -217,17 +345,31 @@ def _select_store_evidence(connection, store: str, categories: list[str]) -> tup
     if not rows:
         raise ValueError(f"competitor evidence population is empty for {store}")
     index = _analysis_index(connection, store, categories)
-    _validate_coverage(store, rows, index)
     selected, category_plans = {}, {}
     for category in categories:
         category_rows = [row for row in rows if row["category_group"] == category]
         if not category_rows:
+            category_plans[category] = {
+                "population_images": 0, "analyzed_images": 0,
+                "selected_images": 0, "status": "category_unavailable",
+            }
             continue
-        dimensions = _select_dimension_evidence(category_rows, index, selected)
-        clusters = _select_cluster_evidence(category_rows, index, selected)
+        analyzed_rows = [row for row in category_rows if index.get(row["product_id"])]
+        if not analyzed_rows:
+            category_plans[category] = {
+                "population_images": len(category_rows), "analyzed_images": 0,
+                "selected_images": 0, "status": "dimension_tags_unavailable",
+            }
+            continue
+        _validate_coverage(store, analyzed_rows, index)
+        before = len(selected)
+        dimensions = _select_dimension_evidence(analyzed_rows, index, selected)
+        clusters = _select_cluster_evidence(analyzed_rows, index, selected)
         category_plans[category] = {
-            "population_images": len(category_rows), "dimensions": dimensions,
-            "visual_clusters": clusters,
+            "population_images": len(category_rows),
+            "analyzed_images": len(analyzed_rows),
+            "selected_images": len(selected) - before, "status": "available",
+            "dimensions": dimensions, "visual_clusters": clusters,
         }
     chosen = sorted(selected.values(), key=lambda row: (
         row["category_group"], row.get("catalog_rank") or 10**9, row["product_id"],
@@ -311,6 +453,9 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
         raise ValueError("AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY are required")
     rows, competitor_evidence = _select_rows(
         args.db, args.target_store, args.categories,
+        key_category_limit=args.key_category_limit,
+        sample_per_category=args.sample_per_category,
+        sample_seed=args.sample_seed,
     )
     output = Path(args.output)
     image_cache = _shared_image_cache(args, output)
@@ -334,17 +479,42 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
     target_total = sum(item["role"] == "target" for item in items)
     if not target_total:
         raise RuntimeError("all target HD image downloads failed")
+    key_category_analysis = competitor_evidence["target"]
+    categories = [
+        row["category"] for row in key_category_analysis["key_categories"]
+    ]
+    downloaded_by_category = {
+        category: sum(
+            item["role"] == "target" and item["category_group"] == category
+            for item in items
+        )
+        for category in categories
+    }
+    key_category_analysis["key_categories"] = [
+        {**row, "downloaded_images": downloaded_by_category[row["category"]]}
+        for row in key_category_analysis["key_categories"]
+    ]
     scope = {
-        "target_store": args.target_store, "categories": args.categories,
+        "target_store": args.target_store, "categories": categories,
         "target_images": target_total,
         "competitor_images": sum(item["role"] == "competitor" for item in items),
         "competitor_population_images": sum(
+            store["analyzed_images"] for store in competitor_evidence["stores"].values()
+        ),
+        "competitor_catalog_population_images": sum(
             store["population_images"] for store in competitor_evidence["stores"].values()
         ),
-        "competitor_sampling": "全量维度分布分层后选择典型图与边界图",
+        "competitor_sampling": "仅从已有完整12维标签覆盖的可比品类分布中选择典型图与有效边界图",
         "competitor_brands": COMPETITOR_BRANDS,
         "competitor_selection_dimensions": list(SELECTION_DIMENSIONS),
+        "analysis_dimensions": {
+            "catalog_tag_dimensions": list(SELECTION_DIMENSIONS),
+            "gpt_visible_observation_fields": list(OBSERVABLE_FIELDS),
+        },
+        "store_profile": key_category_analysis["store_profile"],
+        "key_category_analysis": key_category_analysis,
         "position": 1, "excluded_metrics": ["曝光", "点击", "转化", "销量", "ROI"],
+        "excluded_analysis": ["人群画像", "代表红人", "敏感模特属性推断"],
     }
     manifest = {
         "status": "analyzing", "scope": scope, "model": args.deployment,
@@ -391,6 +561,9 @@ def run_report_analysis(args, progress=lambda _stage, _value: None) -> Path:
         "sections": report["sections"], "image_observations": evidence["observations"],
         "analysis_contract": {
             "section_ids": list(SECTION_IDS),
+            "catalog_tag_dimensions": list(SELECTION_DIMENSIONS),
+            "gpt_visible_observation_fields": list(OBSERVABLE_FIELDS),
+            "excluded_analysis": scope["excluded_analysis"],
             "claim_evidence_required": [
                 "derivation", "support_image_ids", "counterexample_image_ids",
                 "example_image_ids", "sample_count", "filters", "observation_fields",
@@ -451,7 +624,8 @@ def revise_report_section(args, progress=lambda _stage, _value: None) -> Path:
 def default_args(**overrides):
     values = {
         "db": None, "output": None, "target_store": "aloruh_shein",
-        "categories": ["TOPS", "SKIRTS"],
+        "categories": None, "key_category_limit": 3,
+        "sample_per_category": 20, "sample_seed": "report-analysis",
         "download_timeout": 30, "image_cache": None,
         "deployment": "gpt-5.6-sol",
         "endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT"),

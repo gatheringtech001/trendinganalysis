@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, formatNumber, stores } from "./api";
+import { formatCategory } from "./imageAnalysis";
 import ProductImage from "./Media";
 
 const stageLabels = {
@@ -10,6 +11,15 @@ const stageLabels = {
   rendering_cover: "排版封面", rendering_sections: "排版报告章节",
   rendering_evidence_appendix: "排版逐图证据附录", publishing: "发布PDF",
   complete: "完成", failed: "失败",
+};
+const observableLabels = {
+  scene: "拍摄场景", framing: "画面构图", pose_action: "姿势与动作",
+  lighting: "光线", palette: "色彩", styling: "搭配",
+  silhouette: "廓形", design_details: "设计细节", material_texture: "材质纹理",
+  garment_display: "商品展示", first_image_type: "首图类型",
+  brand_signal: "品牌信号", text_overlay: "文字叠加", model_presence: "模特在场",
+  face_visibility: "面部可见性", hairstyle: "可见发型",
+  makeup_presentation: "可见妆容", expression_gaze: "表情与视线",
 };
 
 function UsageRow({ label, usage }) {
@@ -94,6 +104,8 @@ function SectionReview({ job, onReview, section }) {
 
 function ReportAnalysisDraft({ job, onReview }) {
   const result = job.result || {};
+  const profile = result.scope?.store_profile || {};
+  const keyAnalysis = result.scope?.key_category_analysis || {};
   const imageLookup = useMemo(() => new Map(
     (result.images || []).map((image) => [image.image_id, image]),
   ), [result.images]);
@@ -101,17 +113,36 @@ function ReportAnalysisDraft({ job, onReview }) {
     (result.image_observations || []).map((row) => [row.image_id, row]),
   ), [result.image_observations]);
   return <div className="report-analysis-draft">
-    {result.scope?.competitor_population_images == null ? <aside className="legacy-report-notice">
+    {!result.scope?.key_category_analysis ? <aside className="legacy-report-notice">
       这是旧版报告：三家竞品各最多 12 张分位选图，未按品牌拆分结论。新任务会使用竞品全量维度分布，
       再选择分层高清证据，并强制分别分析 Princess Polly、Motel Rocks、PrettyLittleThing。
     </aside> : null}
     <section className="report-summary"><div><span>REPORT-SPECIFIC ANALYSIS</span>
       <h2>报告专项分析草稿</h2><p>这是为最终视觉诊断 PDF 重新执行的分析，不是旧维度聚合结果。</p></div>
       <dl><div><dt>目标图片</dt><dd>{formatNumber(result.scope?.target_images)}</dd></div>
-        <div><dt>竞品全量分母</dt><dd>{result.scope?.competitor_population_images == null
+        <div><dt>竞品12维可比分母</dt><dd>{result.scope?.competitor_population_images == null
           ? "旧版未记录" : formatNumber(result.scope.competitor_population_images)}</dd></div>
         <div><dt>竞品高清证据</dt><dd>{formatNumber(result.scope?.competitor_images)}</dd></div>
         <div><dt>PDF Section</dt><dd>{result.sections?.length || 0}</dd></div></dl></section>
+    {result.scope?.key_category_analysis ? <section className="analysis-scope-cards">
+      <article><span>店铺基本信息</span><h3>{profile.store_name}</h3>
+        <dl><div><dt>商品</dt><dd>{formatNumber(profile.product_count)}</dd></div>
+          <div><dt>图片索引</dt><dd>{formatNumber(profile.image_count)}</dd></div>
+          <div><dt>市场</dt><dd>{profile.market || "未记录"}</dd></div>
+          <div><dt>数据更新时间</dt><dd>{profile.data_updated_at?.slice(0, 19) || "未记录"}</dd></div></dl></article>
+      <article><span>重点品类 · 全量排序后随机复核</span><h3>前 {keyAnalysis.key_categories?.length || 0} 个品类</h3>
+        <ol>{(keyAnalysis.key_categories || []).map((row) => <li key={row.category}>
+          <strong>{formatCategory(row.category)}</strong>
+          <span>全量 {formatNumber(row.population_products)} 件</span>
+          <span>随机 {formatNumber(row.sample_selected)} 张 / 成功 {formatNumber(row.downloaded_images ?? row.sample_selected)} 张</span>
+        </li>)}</ol>
+        <small>复现种子：{keyAnalysis.sampling?.seed}</small></article>
+      <article><span>图片与竞品证据</span><h3>缓存优先，不重复下载</h3>
+        <dl><div><dt>缓存命中</dt><dd>{formatNumber(result.cache_hits)}</dd></div>
+          <div><dt>实际下载</dt><dd>{formatNumber(result.network_downloads)}</dd></div>
+          <div><dt>竞品</dt><dd>{Object.values(result.scope?.competitor_brands || {}).join(" / ")}</dd></div>
+          <div><dt>明确排除</dt><dd>人群画像、代表红人、敏感属性推断</dd></div></dl></article>
+    </section> : null}
     <UsageAudit analysis={job} />
     <section className="report-executive-draft"><h3>执行摘要草稿</h3>
       <ul>{(result.executive_summary || []).map((item) => <li key={item}>{item}</li>)}</ul></section>
@@ -132,7 +163,7 @@ function ReportAnalysisDraft({ job, onReview }) {
             <p>{observation.visual_role}</p>
             <details><summary>肉眼可见事实与证据线索</summary>
               <dl>{Object.entries(observation.observable || {}).map(([key, value]) =>
-                <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
+                <div key={key}><dt>{observableLabels[key] || key}</dt><dd>{value}</dd></div>)}</dl>
               <ul>{(observation.evidence_cues || []).map((cue) => <li key={cue}>{cue}</li>)}</ul>
             </details></div></article>;
       })}</div>
@@ -140,17 +171,20 @@ function ReportAnalysisDraft({ job, onReview }) {
   </div>;
 }
 
-function StartAnalysis({ disabled, onStart }) {
+function StartAnalysis({ categories, disabled, onStart, summary }) {
   return <section className="report-analysis-start">
     <span>ON-DEMAND REPORT ANALYSIS</span><h2>主动生成报告专项分析</h2>
-    <p>点击后才会开始：下载 Aloruh 上衣与半身裙全部首图高清版本，逐图使用 GPT-5.6 Sol 分析；
-      三家竞品的全部封面图先作为维度分布分母，再按店铺、品类和六个视觉维度选择高频典型图、
-      覆盖率至少约 0.5% 的低频边界图，并按六维组合视觉簇补充代表图。不会随机抽图，
-      也不会直接复用旧的维度结论。</p>
-    <dl><div><dt>目标范围</dt><dd>Aloruh(SHEIN) · Tops + Skirts · SKU封面图</dd></div>
+    <p>先用店铺全部商品计算品类结构，自动选择商品数最多的 3 个重点品类；每个品类再以任务 ID
+      作为随机种子抽取最多 20 个不同商品首图，用 GPT-5.6 Sol 逐图复核。三家竞品仍使用全部已采集
+      标签分布选择典型与有效边界证据。高清图片优先命中共享缓存，不重复下载。</p>
+    <dl><div><dt>店铺全量</dt><dd>{formatNumber(summary?.metrics?.products)} 个商品 · {formatNumber(summary?.metrics?.images)} 条图片索引</dd></div>
+      <div><dt>自动重点品类</dt><dd>{categories.length
+        ? categories.map((row) => `${formatCategory(row.category)} ${formatNumber(row.products)}件`).join(" / ")
+        : "正在读取…"}</dd></div>
+      <div><dt>目标抽样</dt><dd>前 3 个重点品类 · 每类最多随机 20 张 · 同一任务可复现</dd></div>
       <div><dt>成品结构</dt><dd>品牌定位 / 商品展示 / 店铺视觉 / 竞品差距 / 升级方向</dd></div>
-      <div><dt>竞品选图</dt><dd>逐店铺全量分布 → 品类 × 六维度 → 高频典型 + ≥约0.5%低频边界 + 六维组合簇</dd></div>
-      <div><dt>证据要求</dt><dd>逐图观察 + 支持图 + 反例图 + 代表图 + 推导方法</dd></div></dl>
+      <div><dt>竞品选图</dt><dd>Princess Polly / Motel Rocks / PrettyLittleThing · 全量 12 维标签分布 → 典型与有效边界证据</dd></div>
+      <div><dt>分析边界</dt><dd>覆盖可见模特特征；不做人群画像、代表红人或敏感属性推断</dd></div></dl>
     <button disabled={disabled} onClick={onStart} type="button">
       {disabled ? "报告专项分析运行中…" : "开始报告专项分析（会产生费用）"}</button>
   </section>;
@@ -181,6 +215,8 @@ export default function Reports() {
   const [selected, setSelected] = useState("");
   const [generation, setGeneration] = useState(null);
   const [report, setReport] = useState(null);
+  const [catalogSummary, setCatalogSummary] = useState(null);
+  const [catalogCategories, setCatalogCategories] = useState([]);
   const [error, setError] = useState("");
   const job = jobs.find((row) => row.job_id === selected);
   const running = jobs.some((row) => ["queued", "running"].includes(row.status)
@@ -191,7 +227,17 @@ export default function Reports() {
     const first = reports.items?.[0];
     return first ? api.report(first.report_id).then(setReport) : setReport(null);
   });
-  useEffect(() => { refresh().catch((reason) => setError(reason.message)); }, []);
+  const keyCategoryPreview = useMemo(
+    () => catalogCategories.slice(0, 3), [catalogCategories],
+  );
+  useEffect(() => {
+    Promise.all([
+      refresh(), api.summary("aloruh_shein"), api.categories("aloruh_shein"),
+    ]).then(([, summary, categories]) => {
+      setCatalogSummary(summary);
+      setCatalogCategories(categories.items || []);
+    }).catch((reason) => setError(reason.message));
+  }, []);
   useEffect(() => {
     if (!running && !["queued", "running"].includes(generation?.status)) return undefined;
     let cancelled = false;
@@ -216,8 +262,10 @@ export default function Reports() {
       window.clearTimeout(timer);
     };
   }, [running, generation?.status, generation?.job_id]);
-  const start = () => api.startReportAnalysis({ target_store: "aloruh_shein",
-    categories: ["TOPS", "SKIRTS"] })
+  const start = () => api.startReportAnalysis({
+    target_store: "aloruh_shein", category_mode: "auto",
+    key_category_limit: 3, sample_per_category: 20,
+  })
     .then((created) => { setJobs((rows) => [created, ...rows]); setSelected(created.job_id); })
     .catch((reason) => setError(reason.message));
   const review = (sectionId, decision, suggestion) => api.reviewReportSection(
@@ -232,7 +280,8 @@ export default function Reports() {
       <button className={tab === "final" ? "active" : ""} disabled={!job?.review?.ready_for_final}
         onClick={() => setTab("final")} type="button">2. 生成最终PDF</button></nav>
     {error ? <div className="error-banner">{error}</div> : null}
-    {tab === "analysis" ? <><StartAnalysis disabled={running} onStart={start} />
+    {tab === "analysis" ? <><StartAnalysis categories={keyCategoryPreview} disabled={running}
+      onStart={start} summary={catalogSummary} />
       {jobs.length ? <div className="report-job-picker">{jobs.map((row) => <button
         className={row.job_id === selected ? "active" : ""} key={row.job_id}
         onClick={() => setSelected(row.job_id)} type="button">
