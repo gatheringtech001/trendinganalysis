@@ -9,7 +9,6 @@ import SourcesView from "./SourcesView";
 import { CompetitorAnalysisView, StoreAnalysisView } from "./AnalysisViews";
 import ImageDimensions from "./ImageDimensions";
 import Reports from "./Reports";
-import CostEstimate from "./CostEstimate.jsx";
 
 const views = {
   overview: { label: "总览", icon: "overview" },
@@ -17,7 +16,6 @@ const views = {
   images: { label: "图片索引", icon: "images" },
   dimensions: { label: "维度分析", icon: "images" },
   reports: { label: "视觉报告", icon: "sources" },
-  costs: { label: "成本估算", icon: "engagement" },
   engagement: { label: "热度与评论", icon: "engagement" },
   profile: { label: "店铺剖析", icon: "overview" },
   comparison: { label: "竞品分析", icon: "engagement" },
@@ -43,13 +41,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (active === "costs") {
-      setError("");
-      return;
-    }
     setError("");
     api.summary(store).then(setSummary).catch((reason) => setError(reason.message));
-  }, [active, store]);
+  }, [store]);
 
   useEffect(() => {
     if (active === "profile" && !store) setStore("princess_polly");
@@ -91,11 +85,9 @@ export default function App() {
         <header className="topbar">
           <div>
             <h1>{active === "overview" ? "四品牌·五数据源外部画像研究站" : views[active].label}</h1>
-            <p>{active === "costs"
-              ? "双架构 · 组件可删减 · USD / CNY 实时重算"
-              : `美国主样本 · Aloruh 已按 SHEIN / Local 拆分 · 快照 ${summary?.snapshot || "—"}`}</p>
+            <p>美国主样本 · Aloruh 已按 SHEIN / Local 拆分 · 快照 {summary?.snapshot || "—"}</p>
           </div>
-          {active === "comparison" ? <span className="comparison-scope">两店动态对比</span> : ["dimensions", "reports", "costs"].includes(active) ? <span className="comparison-scope">{active === "costs" ? "East Asia · PAYG" : "证据可追溯"}</span> : <label className="store-select">
+          {active === "comparison" ? <span className="comparison-scope">两店动态对比</span> : ["dimensions", "reports"].includes(active) ? <span className="comparison-scope">证据可追溯</span> : <label className="store-select">
             <span className="sr-only">选择店铺</span>
             <select value={store} onChange={(event) => setStore(event.target.value)}>
               {Object.entries(stores).map(([value, label]) => (
@@ -105,14 +97,13 @@ export default function App() {
           </label>}
         </header>
 
-        {error && active !== "costs" && <div className="error-banner">{error}</div>}
-        {!summary && !error && active !== "costs" && <div className="loading">正在载入研究快照…</div>}
+        {error && <div className="error-banner">{error}</div>}
+        {!summary && !error && <div className="loading">正在载入研究快照…</div>}
         {summary && active === "overview" && <Overview store={store} summary={summary} />}
         {summary && active === "products" && <Explorer mode="products" store={store} />}
         {summary && active === "images" && <Explorer mode="images" store={store} />}
         {summary && active === "dimensions" && <ImageDimensions />}
         {summary && active === "reports" && <Reports />}
-        {active === "costs" && <CostEstimate />}
         {summary && active === "engagement" && <HeatReviews store={store} />}
         {summary && active === "profile" && <StoreAnalysisView store={store} />}
         {summary && active === "comparison" && <CompetitorAnalysisView />}
