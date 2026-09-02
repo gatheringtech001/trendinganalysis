@@ -26,6 +26,17 @@ TERRA_STANDARD_PRICING = UsagePricing(
     source="OpenAI public standard pricing, 2026-08-18; Azure estimate only",
 )
 
+GPT41_STANDARD_PRICING = UsagePricing(
+    input_per_million=2.0,
+    cached_input_per_million=0.5,
+    cache_write_per_million=2.0,
+    output_per_million=8.0,
+    source=(
+        "OpenAI public GPT-4.1 standard pricing; Azure estimate only, "
+        "actual regional billing may vary"
+    ),
+)
+
 SOL_STANDARD_PRICING = UsagePricing(
     input_per_million=5.0,
     cached_input_per_million=0.5,
@@ -36,6 +47,17 @@ SOL_STANDARD_PRICING = UsagePricing(
         "Azure estimate only, excludes regional uplift"
     ),
 )
+
+
+def pricing_for_deployment(deployment: str) -> UsagePricing:
+    pricing = {
+        "gpt-4.1": GPT41_STANDARD_PRICING,
+        "gpt-5.6-terra": TERRA_STANDARD_PRICING,
+        "gpt-5.6-sol": SOL_STANDARD_PRICING,
+    }.get(deployment)
+    if pricing is None:
+        raise ValueError(f"usage pricing is not configured for {deployment}")
+    return pricing
 
 SUMMARY_REPLACE_ATTEMPTS = 20
 SUMMARY_RETRY_DELAY_SECONDS = 0.25

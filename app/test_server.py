@@ -10,7 +10,7 @@ from server import (
 )
 from report_reviews import REPORT_SECTION_IDS, DetailedReviewStore
 from report_pdf import _approval_summary
-from visual_reports import VisualReportCatalog
+from visual_reports import REPORT_ID, VisualReportCatalog, report_analysis_recency
 
 
 class MatchingAnalysisStore:
@@ -469,7 +469,7 @@ class ResearchStoreTest(unittest.TestCase):
         )
         self.assertEqual([], catalog.list_reports())
         final = {
-            "report_id": "aloruh-visual-diagnostic-2026-08-20",
+            "report_id": REPORT_ID,
             "report_type": "final_visual", "title": "Aloruh 店铺视觉诊断",
             "generated_at": "2026-08-20T00:00:00Z", "sample_count": 2,
             "pages": 8, "sections": [{
@@ -484,7 +484,7 @@ class ResearchStoreTest(unittest.TestCase):
         (pdf_dir / "Aloruh纯视觉诊断-图片结论版.json").write_text(
             json.dumps(final), encoding="utf-8",
         )
-        report = catalog.get("aloruh-visual-diagnostic-2026-08-20")
+        report = catalog.get(REPORT_ID)
 
         self.assertEqual("final_visual", report["report_type"])
         self.assertEqual(2, report["sample_count"])
@@ -493,6 +493,19 @@ class ResearchStoreTest(unittest.TestCase):
                 self.assertIn("derivation", claim)
                 self.assertIn("support_image_ids", claim["evidence"])
                 self.assertIn("counterexample_image_ids", claim["evidence"])
+
+    def test_report_analysis_recency_uses_usage_fallback(self):
+        old_top_level = {
+            "updated_at": "2026-08-20T00:00:00Z",
+            "usage": {"finished_at": "2026-08-20T00:00:00Z"},
+        }
+        imported_new = {
+            "usage": {"finished_at": "2026-08-27T15:56:39Z"},
+        }
+        self.assertGreater(
+            report_analysis_recency(imported_new),
+            report_analysis_recency(old_top_level),
+        )
 
     def test_detailed_review_requires_suggestions_and_all_approvals(self):
         reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
@@ -575,6 +588,7 @@ class ResearchStoreTest(unittest.TestCase):
     def test_report_analysis_requires_explicit_start_and_reanalyzes_rejected_section(self):
         root = Path(self.temp.name) / "report-analysis"
         reviews = DetailedReviewStore(Path(self.temp.name) / "reviews")
+        captured = {}
 
         class FakeCatalog:
             @staticmethod
@@ -586,6 +600,7 @@ class ResearchStoreTest(unittest.TestCase):
                 return None
 
         def fake_runner(args, progress):
+            captured["args"] = args
             progress("analyzing_all_images", 70)
             args.output.mkdir(parents=True, exist_ok=True)
             result = {
@@ -621,7 +636,14 @@ class ResearchStoreTest(unittest.TestCase):
             runner=fake_runner, revision_runner=fake_revision,
         )
         self.assertEqual([], jobs.list())
-        created = jobs.submit({})
+        created = jobs.submit({
+            "target_store": "aloruh_shein", "category_mode": "auto",
+            "key_category_limit": 3, "sample_per_category": 20,
+        })
+        self.assertEqual("auto", created["scope"]["category_mode"])
+        self.assertEqual(3, created["scope"]["key_category_limit"])
+        self.assertEqual(20, created["scope"]["sample_per_category"])
+        self.assertEqual(created["job_id"], created["scope"]["sampling_seed"])
         deadline = time.time() + 2
         status = jobs.get(created["job_id"])
         while status["status"] not in {"complete", "failed"} and time.time() < deadline:
@@ -629,6 +651,19 @@ class ResearchStoreTest(unittest.TestCase):
             status = jobs.get(created["job_id"])
         self.assertEqual("complete", status["status"])
         self.assertEqual(100, status["usage"]["total_tokens"])
+        self.assertEqual(3, captured["args"].key_category_limit)
+        self.assertEqual(20, captured["args"].sample_per_category)
+        self.assertEqual(created["job_id"], captured["args"].sample_seed)
+
+        flexible_scope = jobs._validate({
+            "category_mode": "auto", "key_category_limit": 2,
+        })
+        self.assertEqual(2, flexible_scope["key_category_limit"])
+
+        with self.assertRaisesRegex(ValueError, "重点品类数量"):
+            jobs.submit({"category_mode": "auto", "key_category_limit": 0})
+        with self.assertRaisesRegex(ValueError, "每个重点品类"):
+            jobs.submit({"category_mode": "auto", "sample_per_category": 41})
 
         revised = jobs.revise(
             created["job_id"], REPORT_SECTION_IDS[0], "结论需要更多反例",

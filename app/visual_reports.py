@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 
-REPORT_ID = "aloruh-visual-diagnostic-2026-08-20"
+REPORT_ID = "aloruh-visual-diagnostic-current"
 PDF_NAME = "Aloruh纯视觉诊断-图片结论版.pdf"
 SOURCE_NOTES_NAME = "Aloruh纯视觉诊断-图片结论版-source-notes.json"
 FINAL_REPORT_NAME = "Aloruh纯视觉诊断-图片结论版.json"
@@ -30,6 +31,32 @@ DISPLAY_LABELS = {
     "STANDING": "站姿", "SITTING": "坐姿", "LOOKING_AWAY": "视线移开",
     "MIRROR_SELFIE": "镜面自拍", "INTERACTING_WITH_SCENE": "场景互动",
 }
+
+
+def _timestamp(value) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not isinstance(value, str) or not value:
+        return 0
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.timestamp()
+    except ValueError:
+        return 0
+
+
+def report_analysis_recency(row: dict) -> float:
+    usage = row.get("usage") or {}
+    result = row.get("result") or {}
+    return max(
+        _timestamp(row.get("updated_at")),
+        _timestamp(usage.get("updated_at")),
+        _timestamp(usage.get("finished_at")),
+        _timestamp(result.get("updated_at")),
+        _timestamp(result.get("generated_at")),
+    )
 
 
 def _read_json(path: Path) -> dict:
@@ -66,13 +93,16 @@ class VisualReportCatalog:
             return []
         return [{key: report.get(key) for key in (
             "report_id", "report_type", "title", "generated_at", "sample_count", "pages",
-        )} | {"has_pdf": (self.pdf_dir / PDF_NAME).is_file()}]
+        )} | {"report_id": REPORT_ID, "has_pdf": (self.pdf_dir / PDF_NAME).is_file()}]
 
     def get(self, report_id: str) -> dict | None:
         if report_id != REPORT_ID:
             return None
         report = self._final_report()
-        return {**report, "has_pdf": (self.pdf_dir / PDF_NAME).is_file()} if report else None
+        return {
+            **report, "report_id": REPORT_ID,
+            "has_pdf": (self.pdf_dir / PDF_NAME).is_file(),
+        } if report else None
 
     def list_report_analyses(self) -> list[dict]:
         if not self.report_analysis_root.is_dir():
@@ -82,7 +112,7 @@ class VisualReportCatalog:
             row = self.get_report_analysis(directory.name)
             if row:
                 rows.append(row)
-        return sorted(rows, key=lambda row: row.get("updated_at", ""), reverse=True)
+        return sorted(rows, key=report_analysis_recency, reverse=True)
 
     def get_report_analysis(self, job_id: str) -> dict | None:
         if not isinstance(job_id, str) or not job_id.replace("-", "").isalnum():

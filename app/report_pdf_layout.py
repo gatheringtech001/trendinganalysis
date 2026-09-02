@@ -9,7 +9,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 
-from report_pdf_pages import REFERENCE_SEQUENCE
+from report_pdf_pages import build_page_sequence
 
 
 PAGE = (1920, 1080)
@@ -91,6 +91,8 @@ class DeckBase:
         self.observations = {}
         self.used_image_ids = set()
         self.page_used_image_ids = set()
+        self.plan_used_image_ids = set()
+        self.page_sequence = []
         self.current_spec = None
 
     def _text(self, text, x, y, size, width, color=INK, bold=False, leading=1.16, max_lines=None):
@@ -121,7 +123,16 @@ class DeckBase:
 
     def _evidence_pool(self, spec, evidence):
         section = self._section(spec)
-        claims = [self._claim(spec)] if "claim" in spec else section["claims"]
+        if "claim_indices" in spec:
+            claims = [
+                section["claims"][index]
+                for index in spec["claim_indices"]
+                if index < len(section["claims"])
+            ]
+            if not claims:
+                raise ValueError(f"PDF章节 {section['section_id']} 缺少方案结论")
+        else:
+            claims = [self._claim(spec)] if "claim" in spec else section["claims"]
         ids = []
         for claim in claims:
             claim_evidence = claim["evidence"]
@@ -131,10 +142,20 @@ class DeckBase:
                 ids.extend(claim_evidence["counterexample_image_ids"])
         return ids
 
-    def _semantic_text(self, image_id):
+    def _semantic_fields(self, image_id):
         observation = self.observations.get(image_id, {})
         observable = observation.get("observable", {})
-        values = [value for value in observable.values() if isinstance(value, str)]
+        return {
+            key: value for key, value in observable.items()
+            if isinstance(value, str) and value
+        }
+
+    def _semantic_text(self, image_id, fields=None):
+        observable = self._semantic_fields(image_id)
+        if fields:
+            return " ".join(observable.get(field, "") for field in fields).strip()
+        observation = self.observations.get(image_id, {})
+        values = list(observable.values())
         values.extend([
             observation.get("visual_role", ""),
             self.images[image_id].get("title", ""),
@@ -158,7 +179,7 @@ class DeckBase:
         required_tags = set(requirements.get("tags", []))
         if required_tags and not required_tags.intersection(self._image_tags(image_id)):
             return False
-        text = self._semantic_text(image_id)
+        text = self._semantic_text(image_id, requirements.get("semantic_fields"))
         if requirements.get("include_any") and not any(word in text for word in requirements["include_any"]):
             return False
         for group in requirements.get("include_groups", []):
@@ -173,6 +194,8 @@ class DeckBase:
         scope = requirements.get("scope", "claim" if "claim" in spec else "section")
         evidence = requirements.get("evidence", "all")
         if scope == "claim":
+            ids = self._evidence_pool(spec, evidence)
+        elif scope == "claims":
             ids = self._evidence_pool(spec, evidence)
         elif scope == "section":
             ids = self._evidence_pool({key: value for key, value in spec.items() if key != "claim"}, evidence)
@@ -189,6 +212,8 @@ class DeckBase:
             ids = [image_id for image_id in ids if self.images[image_id].get("store_id") == "aloruh_shein"]
         ids = list(dict.fromkeys(ids))
         ids = [image_id for image_id in ids if self._matches(image_id, requirements)]
+        excluded = set(requirements.get("exclude_image_ids", []))
+        ids = [image_id for image_id in ids if image_id not in excluded]
         ids.sort(key=lambda image_id: (
             image_id in self.page_used_image_ids,
             image_id in self.used_image_ids,
@@ -225,6 +250,7 @@ class DeckBase:
             "store_id": image.get("store_id"),
             "category": image.get("category"),
             "semantic_text": self._semantic_text(image_id),
+            "semantic_fields": self._semantic_fields(image_id),
         })
 
     def _grid(self, ids, x, y, width, height, cols, gap=8, shade=0):
@@ -255,9 +281,10 @@ class DeckBase:
         self.observations = {
             row["image_id"]: row for row in report.get("image_observations", [])
         }
-        if len(REFERENCE_SEQUENCE) != 53:
-            raise RuntimeError("样片页面映射必须固定为53页")
-        for spec in REFERENCE_SEQUENCE:
+        self.page_sequence = build_page_sequence(report)
+        if not self.page_sequence:
+            raise RuntimeError("报告没有可渲染页面")
+        for spec in self.page_sequence:
             self.page += 1
             self.current_spec = spec
             self.page_used_image_ids = set()

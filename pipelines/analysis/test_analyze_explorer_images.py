@@ -3,9 +3,15 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
-from analyze_explorer_images import load_pending, persist_results
-from fashion_image_analysis import ANALYSIS_VERSION, DIMENSIONS
+from analyze_explorer_images import _analyzer, load_pending, persist_results
+from fashion_image_analysis import (
+    ANALYSIS_VERSION,
+    DIMENSIONS,
+    LEGACY_ANALYSIS_VERSION,
+    LEGACY_DIMENSIONS,
+)
 
 
 def complete_analysis():
@@ -19,6 +25,15 @@ def complete_analysis():
 
 
 class ExplorerAnalysisTest(unittest.TestCase):
+    def test_analyzer_passes_bearer_authentication(self):
+        analyzer = _analyzer(SimpleNamespace(
+            endpoint="https://example.openai.azure.com/openai/v1/responses",
+            api_key="token", deployment="gpt-4.1", auth_type="bearer",
+        ), lambda _event: None)
+
+        self.assertEqual("bearer", analyzer.options.auth_type)
+        self.assertEqual("gpt-4.1", analyzer.options.deployment)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
@@ -63,6 +78,34 @@ class ExplorerAnalysisTest(unittest.TestCase):
         pending = load_pending(self.db, "motel", "SKIRTS", 1)
         self.assertEqual(1, len(pending.requests))
         self.assertEqual(2, len(pending.targets_by_key[pending.requests[0].key]))
+
+    def test_load_pending_reanalyzes_v1_but_skips_v2(self):
+        connection = sqlite3.connect(self.db)
+        legacy_tags = {dimension: ["UNKNOWN"] for dimension in LEGACY_DIMENSIONS}
+        legacy_confidence = {dimension: 0.5 for dimension in LEGACY_DIMENSIONS}
+        connection.execute(
+            "INSERT INTO image_analysis VALUES(?,?,?,?,?,?,?,?)",
+            (
+                "motel", "1", 1, LEGACY_ANALYSIS_VERSION, "complete", "legacy",
+                json.dumps(legacy_tags), json.dumps(legacy_confidence),
+            ),
+        )
+        current = complete_analysis()
+        connection.execute(
+            "INSERT INTO image_analysis VALUES(?,?,?,?,?,?,?,?)",
+            (
+                "motel", "3", 1, ANALYSIS_VERSION, "complete", "current",
+                json.dumps(current["tags"]), json.dumps(current["confidence"]),
+            ),
+        )
+        connection.commit()
+        connection.close()
+
+        pending = load_pending(self.db, "motel", None, 1)
+
+        self.assertEqual(1, len(pending.requests))
+        targets = pending.targets_by_key[pending.requests[0].key]
+        self.assertEqual({"1", "2"}, {target.product_id for target in targets})
 
     def test_persist_results_updates_database_and_source_jsonl(self):
         pending = load_pending(self.db, "motel", "SKIRTS", 1)

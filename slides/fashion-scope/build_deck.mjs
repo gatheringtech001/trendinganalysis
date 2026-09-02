@@ -6,8 +6,8 @@ import { Presentation, PresentationFile } from "@oai/artifact-tool";
 const TMP = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(TMP, "..", "..");
 const ASSETS = path.join(TMP, "assets");
-const RENDERS = path.join(TMP, "renders-v8");
-const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260826-v8.pptx");
+const RENDERS = path.join(TMP, "renders-v13");
+const FINAL = path.join(ROOT, "output", "Fashion-Scope-技术架构与产品体验-20260827-v13-final.pptx");
 
 const W = 1280;
 const H = 720;
@@ -204,7 +204,7 @@ async function addDemoSlide(options) {
     addText(s, detail, { left: 1032, top: y - 2, width: 176, height: 58 },
       { fontSize: 16, color: INK }, `demo-detail-${index}`);
   });
-  addFooter(s, "Fashion Scope · production screenshot walkthrough · 2026-08-26");
+  addFooter(s, "Fashion Scope · production screenshot walkthrough · 2026-08-27");
   addNotes(s, [sources.production, `slides/fashion-scope/assets/${imageName}`]);
 }
 
@@ -218,20 +218,20 @@ const p = Presentation.create({ slideSize: { width: W, height: H } });
     { fontSize: 14, typeface: FONT_LATIN, bold: true, color: "#8FD4F2" });
   addText(s, "商铺视觉数据\n如何变成可交付结论", { left: 58, top: 152, width: 480, height: 180 },
     { fontSize: 50, bold: true, color: WHITE });
-  addText(s, "外部数据源 → 15维标准化 → 两种分析工作流 → 53页PDF",
+  addText(s, "外部数据源 → Aloruh首图15维（竞品12维） → 两种分析工作流 → 内容驱动PDF",
     { left: 58, top: 378, width: 480, height: 88 }, { fontSize: 21, color: "#D7D7D7" });
   addRule(s, 58, 532, 440, "#343434", 2);
   addText(s, "COLLECT  /  STANDARDIZE  /  ANALYZE  /  DELIVER",
     { left: 58, top: 556, width: 470, height: 30 },
     { fontSize: 15, typeface: FONT_LATIN, bold: true, color: "#8FD4F2" });
-  addText(s, "Discussion deck · 2026.08.26", { left: 58, top: 636, width: 350, height: 22 },
+  addText(s, "Discussion deck · 2026.08.27", { left: 58, top: 636, width: 350, height: 22 },
     { fontSize: 13, typeface: FONT_LATIN, color: "#8D9198" });
-  addText(s, "FINAL DELIVERY / PAGE 53", { left: 600, top: 62, width: 320, height: 20 },
+  addText(s, "FINAL DELIVERY / PLAN B", { left: 600, top: 62, width: 320, height: 20 },
     { fontSize: 13, typeface: FONT_LATIN, bold: true, color: "#8D9198" });
   addBox(s, { left: 586, top: 96, width: 646, height: 548 }, "#1E1E1E", "none", 8);
-  await addImage(s, "page-53.jpg", { left: 606, top: 118, width: 606, height: 503 },
+  await addImage(s, "page-49.jpg", { left: 606, top: 118, width: 606, height: 503 },
     { alt: "Final visual diagnosis recommendation page", fit: "contain" });
-  addNotes(s, [`${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
+  addNotes(s, [`${sources.repo}/slides/fashion-scope/assets/page-49.jpg`]);
 }
 
 let pageNumber = 2;
@@ -246,9 +246,9 @@ let pageNumber = 2;
   const titles = ["外部数据源", "标准化数据层", "分析与证据引擎", "产品与交付"];
   const bodies = [
     "Shopify /products.json\nAlgolia browse\nWooCommerce Store API\nBrowser Use＋人工验证",
-    "统一商品/图片 JSONL\n稳定商品与图片键\nURL/内容哈希去重\n15维标签＋SQLite",
+    "统一商品/图片 JSONL\n稳定键＋URL/内容去重\nAloruh 1,782张首图15维\n竞品12维可比分布\nSQLite查询层",
     "体验1：组合筛选＋精读\n体验2：整体分析＋报告\nTerra批量打标 / Sol精读\n报告共享高清缓存与证据",
-    "React 19 + Vite\nPython HTTP API\n五个Section逐章审核\nReportLab/Pillow 53页PDF",
+    "React 19 + Vite\nPython HTTP API\n五个Section逐章审核\nReportLab/Pillow内容驱动PDF",
   ];
   // Arrows are created before nodes so they stay behind the diagram entities.
   for (let i = 0; i < 3; i += 1) {
@@ -332,8 +332,8 @@ let pageNumber = 2;
   const overviewMetrics = [
     ["60,260", "商品记录", false],
     ["288,831", "图片URL索引（非文件）", true],
-    ["25,916", "已完成15维分析图片", false],
-    ["606,007", "累计分析标签", false],
+    ["27,355", "已完成标签分析图片", false],
+    ["650,411", "累计分析标签", false],
   ];
   overviewMetrics.forEach((item, index) => {
     const left = 48 + index * 292;
@@ -344,7 +344,7 @@ let pageNumber = 2;
   });
 
   const inventory = [
-    ["Aloruh（SHEIN）", "2,848", "4,352", "343"],
+    ["Aloruh（SHEIN）", "2,848", "4,352", "1,782"],
     ["Aloruh local", "10,487", "10,771", "10,466"],
     ["Princess Polly", "17,008", "119,205", "5,613"],
     ["Motel Rocks", "4,422", "26,676", "2,141"],
@@ -384,15 +384,15 @@ let pageNumber = 2;
     { fontSize: 17, typeface: FONT_LATIN, bold: true, color: WHITE, alignment: "right" }, "inventory-total-products");
   addText(s, "288,831", { left: 704, top: 598, width: 180, height: 24 },
     { fontSize: 17, typeface: FONT_LATIN, bold: true, color: "#8FD4F2", alignment: "right" }, "inventory-total-images");
-  addText(s, "25,916", { left: 972, top: 598, width: 180, height: 24 },
+  addText(s, "27,355", { left: 972, top: 598, width: 180, height: 24 },
     { fontSize: 17, typeface: FONT_LATIN, bold: true, color: WHITE, alignment: "right" }, "inventory-total-analyzed");
-  addText(s, "读法：1个商品若有5张图，就产生5条图片URL索引；本页不统计本地实际下载文件数。",
+  addText(s, "读法：1个商品若有5张图，就产生5条图片URL索引；Aloruh 1,782张首图已完成15维，竞品仍为12维。",
     { left: 48, top: 646, width: 1166, height: 28 }, { fontSize: 13, color: MUTED }, "inventory-method-note");
-  addFooter(s, "Fashion Scope · explorer.db live inventory · 2026-08-26");
+  addFooter(s, "Fashion Scope · explorer.db live inventory · 2026-08-27");
   addNotes(s, [
     `${sources.repo}/app/explorer.db`,
     `${sources.repo}/app/database_builder.py`,
-    "Live SQLite aggregate query executed 2026-08-26: products, per-store distinct source_url, analyzed images, and analysis tags.",
+    "Remote relabeled SQLite aggregate query executed 2026-08-27: 27,355 analyzed images and 650,411 tag rows.",
   ]);
 }
 
@@ -453,7 +453,7 @@ let pageNumber = 2;
   flowArrow(s, { position: { left: 762, top: 332, width: 44, height: 48 } });
   const lanes = [
     [48, "01 / URL INDEX", "官方响应已经带 image_urls", "本地展开为 images_*.jsonl\n键：store_id＋product_id＋position\n计算 url_sha256\n不下载图片文件\n因此可以快速形成全量索引"],
-    [420, "02 / NORMALIZED DB", "去重后进入SQLite", "商品ID去重\n店铺内 source_url 唯一\n同URL分析一次并复用结果\n15维标签拆入查询表\nUI只分页读取需要的行"],
+    [420, "02 / NORMALIZED DB", "去重后进入SQLite", "商品ID去重\n店铺内 source_url 唯一\n同URL分析一次并复用结果\nAloruh首图写入15维\n竞品保留12维可比分布\nUI只分页读取需要的行"],
     [792, "03 / HD + AI", "付费分析才取高清字节", "尝试去缩略图URL\n校验公网主机、格式、尺寸和SHA256\n整体报告任务共享 _image_cache\n缓存损坏或不达高清门槛才重下\n随后由Sol读取detail=high"],
   ];
   lanes.forEach((lane, i) => {
@@ -482,8 +482,8 @@ let pageNumber = 2;
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "标准化数据层：不同来源被压成同一套商品、图片与15维标签", "Layer 2 · normalization", pageNumber++,
-    "每张图片保留 store_id / product_id / position / source_url；每个维度保存标签与置信度。");
+  addHeader(s, "标准化数据层：Aloruh 1,782张首图已完成15维", "Layer 2 · normalization", pageNumber++,
+    "每张图片保留 store_id / product_id / position / source_url；三家竞品继续用既有12维标签作为可比分布。");
   const pipeline = ["原始来源", "商品JSONL", "图片JSONL", "URL/内容去重", "SQLite索引"];
   for (let i = 0; i < 4; i += 1) {
     flowArrow(s, { position: { left: 246 + i * 244, top: 198, width: 36, height: 38 } });
@@ -509,7 +509,7 @@ let pageNumber = 2;
       { fontSize: 18, color: MUTED });
   });
   addBox(s, { left: 48, top: 602, width: 1142, height: 50 }, BLACK);
-  addText(s, "标签可多值 · 商品类别单值 · 每维都有 confidence · 新增图片可按固定字典增量分析",
+  addText(s, "Aloruh：1,782张首图 × 15维完整，0个缺失 · 竞品：15,107张图片保留12维可比分布",
     { left: 72, top: 616, width: 1094, height: 26 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
@@ -524,7 +524,7 @@ let pageNumber = 2;
   const s = p.slides.add();
   s.background.fill = WHITE;
   addHeader(s, "15维不是抽象概念：前8维把商品与镜头变成可组合条件", "Layer 2 · taxonomy examples 1/2", pageNumber++,
-    "每个例子都来自 fashion-image-v2 的受控标签字典；UI显示中文，数据库保存稳定英文代码。");
+    "15维已用于Aloruh 1,782张首图；每个例子都来自fashion-image-v2受控字典，UI显示中文，数据库保存英文代码。");
   const left = [
     ["01", "商品类别 / product_category", "上衣 · 半身裙 · 连衣裙 · 套装", "先回答主售商品是什么；这是唯一必须单值的维度。"],
     ["02", "廓形版型 / silhouette_fit", "修身包体 · 宽松 · A字廓形 · 紧身胸衣式", "用于比较贴体、宽松、A字与结构塑形的展示差异。"],
@@ -552,7 +552,7 @@ let pageNumber = 2;
   const s = p.slides.add();
   s.background.fill = WHITE;
   addHeader(s, "后7维补足材质、视觉语言与版面信号", "Layer 2 · taxonomy examples 2/2", pageNumber++,
-    "同一张图可在大多数维度返回多个标签，但每个维度都必须给出标签数组和0–1置信度。");
+    "Aloruh的09–15维均已完成；光线、模特状态和图文叠加让报告可覆盖白皮书中的拍摄与可见模特要求。");
   const left = [
     ["09", "材质纹理 / material_texture", "针织 · 蕾丝 · 缎面感 · 牛仔", "只标记肉眼可见或标题明确支持的纹理，不猜测纤维成分。"],
     ["10", "色彩图案 / color_pattern", "黑色 · 红色 · 花卉图案 · 纯色", "颜色与图案可以并存，例如红色＋纯色。"],
@@ -590,12 +590,12 @@ let pageNumber = 2;
     "两层模型共享图片键与证据上下文，但输入清晰度、触发时机、输出结构和成本完全不同。");
   const lanes = [
     {
-      left: 48, eyebrow: "GPT-5.6-TERRA / BATCH TAGGING", title: "批量15维分类",
+      left: 48, eyebrow: "GPT-5.6-TERRA / BATCH TAGGING", title: "Aloruh v2已完成15维",
       lines: [
         ["输入", "图片URL＋标题＋当前分类＋位置；detail=low"],
         ["调度", "默认8图/批、8个worker；只处理未分析且URL去重后的图片"],
         ["Prompt", "受控字典＋可见证据边界＋UNKNOWN＋主售商品规则"],
-        ["输出", "15组tags＋15个confidence；strict JSON Schema"],
+        ["输出", "Aloruh v2返回15组tags＋confidence；竞品v1保留12组；strict JSON Schema"],
         ["质控", "增量检查点、4次重试、策略拦截拆批、图片索引校验"],
       ],
       accent: false,
@@ -627,7 +627,7 @@ let pageNumber = 2;
     });
   });
   addBox(s, { left: 48, top: 612, width: 1152, height: 42 }, BLACK);
-  addText(s, "先用Terra把数万张图变成检索空间；只有用户明确付费时，才让Sol读取高清图并写结论。",
+  addText(s, "Terra已把27,355张图变成检索空间：Aloruh首图15维，其他店铺12维；Sol只在用户明确付费时读取高清图。",
     { left: 72, top: 622, width: 1104, height: 24 }, { fontSize: 17, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
@@ -672,7 +672,7 @@ let pageNumber = 2;
     "标签集合、统一可见证据规则与严格输出Schema共同限定。",
   ], true);
   addBox(s, { left: 48, top: 638, width: 1160, height: 26 }, BLACK);
-  addText(s, "完整通用规则＋15个标签字典逐字放在附录A1–A4；Sol主流程与修订Prompt见附录A5–A8。",
+  addText(s, "完整通用规则＋15个标签字典逐字放在附录A1–A4；Sol主流程与修订Prompt见附录A5–A9。",
     { left: 72, top: 642, width: 1112, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
@@ -725,7 +725,7 @@ let pageNumber = 2;
   addHeader(s, "体验1流程①：AND筛选后，手动选图与自动选图走两条真实路径", "Layer 3A · selection flow", pageNumber++,
     "Terra标签只负责缩小候选范围；最终送入Sol的图片由用户明确选择，或由系统按店铺均衡随机选取。");
 
-  flowNode(s, { position: { left: 48, top: 170, width: 226, height: 142 }, step: "01", title: "校验筛选条件", detail: "维度必须属于15维\n标签必须在受控字典" , accent: true });
+  flowNode(s, { position: { left: 48, top: 170, width: 226, height: 142 }, step: "01", title: "校验筛选条件", detail: "维度必须已有生产数据\n标签必须在受控字典" , accent: true });
   flowArrow(s, { position: { left: 274, top: 218, width: 42, height: 42 } });
   flowNode(s, { position: { left: 316, top: 170, width: 226, height: 142 }, step: "02", title: "SQLite执行AND", detail: "每一维都必须命中\nsource_url全局去重" });
   flowArrow(s, { text: "↗", position: { left: 542, top: 178, width: 52, height: 52 } });
@@ -806,9 +806,9 @@ let pageNumber = 2;
 const experience1Demos = [
   {
     title: "体验1 Demo：进入维度分析，先看可用范围", eyebrow: "Layer 3A · demo 1/7",
-    subtitle: "入口先告诉用户已有25,916张分析图、15个维度，以及AND组合筛选规则。",
+    subtitle: "入口显示27,355张已分析图片；15个维度可筛，其中光线、模特状态、图文叠加目前仅Aloruh有值。",
     imageName: "experience1-step1-enter-dimensions.png", step: "STEP 01 / 07", summary: "进入图片维度分析",
-    details: ["确认已有分析图片规模", "查看15个维度与可用标签", "此时还没有筛选结果"],
+    details: ["确认已有分析图片规模", "查看15个中文维度", "按店铺与维度真实覆盖筛选"],
   },
   {
     title: "体验1 Demo：选择需要组合的分析维度", eyebrow: "Layer 3A · demo 2/7",
@@ -851,53 +851,44 @@ for (const demo of experience1Demos) {
   await addDemoSlide({ ...demo, page: pageNumber++ });
 }
 
-// Experience 2 workflow: build the evidence base.
+// Experience 2 workflow: define and lock the evidence scope.
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "体验2流程①：竞品按“店铺×品类”分层选证据", "Layer 3B · evidence selection", pageNumber++,
-    "15,107张竞品首图负责计算分布；高清证据图只负责让视觉判断可复核，不能替代全量分母。");
+  addHeader(s, "体验2流程①：先确定报告范围，再锁定证据池", "Layer 3B · scope flow", pageNumber++,
+    "用户只需选择目标店铺并确认范围；系统自动完成品类识别、竞品覆盖检查和证据选取。");
 
-  addBox(s, { left: 48, top: 166, width: 264, height: 442 }, LIGHT_BLUE, "none", 8, "target-population");
-  addText(s, "目标店铺", { left: 70, top: 188, width: 180, height: 28 }, { fontSize: 21, bold: true, color: BLUE });
-  addText(s, "Aloruh · TOPS＋SKIRTS", { left: 70, top: 230, width: 216, height: 28 }, { fontSize: 16, typeface: FONT_LATIN, bold: true });
-  metric(s, "415", "计划进入下载的全量首图", 70, 286, 190, true);
-  addRule(s, 70, 404, 216, "#AFCFE1", 2);
-  addText(s, "规则", { left: 70, top: 430, width: 80, height: 24 }, { fontSize: 18, bold: true });
-  addText(s, "范围内全部首图都进入下载队列，不使用标签筛掉目标店铺图片。成功下载386张。",
-    { left: 70, top: 470, width: 216, height: 112 }, { fontSize: 17, color: INK });
-
-  addBox(s, { left: 336, top: 166, width: 366, height: 442 }, PANEL, "none", 8, "competitor-population");
-  addText(s, "竞品全量分母", { left: 358, top: 188, width: 220, height: 28 }, { fontSize: 21, bold: true });
-  addText(s, "3家竞品 × 2个品类 = 6个独立池", { left: 358, top: 230, width: 316, height: 28 }, { fontSize: 17, color: MUTED });
-  metric(s, "15,107", "张竞品首图参与分布统计", 358, 286, 230);
-  addRule(s, 358, 404, 316, "#D0D2D6", 2);
-  addText(s, "每个池都读取6维标签", { left: 358, top: 430, width: 290, height: 28 }, { fontSize: 18, bold: true });
-  addText(s, "穿着场合 · 拍摄场景 · 画面构图\n视角动作 · 视觉语言 · 搭配方式\n缺任一维标签，整个池直接失败。",
-    { left: 358, top: 472, width: 316, height: 100 }, { fontSize: 17, color: MUTED });
-
-  addBox(s, { left: 726, top: 166, width: 482, height: 442 }, BLACK, "none", 8, "competitor-selection-algorithm");
-  addText(s, "每个竞品×品类池的选图算法", { left: 750, top: 188, width: 410, height: 30 }, { fontSize: 21, bold: true, color: WHITE });
-  const selectionSteps = [
-    ["01", "每一维按全量标签计数与占比排序"],
-    ["02", "选最高频2个标签＋达到约0.5%门槛后最少见的1个边界标签"],
-    ["03", "代表图按标签置信度最高 → catalog rank → product ID选出"],
-    ["04", "每图取6维最高置信度标签，形成六维组合签名"],
-    ["05", "组合簇再选Top 2＋有效边界1；最后跨维、理由、URL去重"],
+  const nodes = [
+    ["01", "读取全店目录", "确认店铺规模、品类结构与可用图片"],
+    ["02", "识别主品类", "按全店商品结构找出主要分析对象"],
+    ["03", "补足重点品类", "加入白皮书要求关注的补充品类"],
+    ["04", "检查竞品覆盖", "只保留标签口径完整的可比品类"],
+    ["05", "选择证据图", "兼顾典型表达与有效边界案例"],
+    ["06", "锁定任务范围", "保存店铺、商品、图片和竞品角色"],
   ];
-  selectionSteps.forEach((row, index) => {
-    const y = 244 + index * 64;
-    addText(s, row[0], { left: 750, top: y, width: 34, height: 22 },
-      { fontSize: 14, typeface: FONT_LATIN, bold: true, color: "#8FD4F2" });
-    addText(s, row[1], { left: 796, top: y - 2, width: 384, height: 50 },
-      { fontSize: 16, color: "#D7D7D7" });
+  for (let i = 0; i < 5; i += 1) {
+    flowArrow(s, { position: { left: 230 + i * 196, top: 250, width: 34, height: 42 } });
+  }
+  nodes.forEach((node, index) => {
+    flowNode(s, {
+      position: { left: 48 + index * 196, top: 178, width: 176, height: 190 },
+      step: node[0], title: node[1], detail: node[2], accent: index === 0, dark: index === 5,
+    });
   });
-  addText(s, "结果：计划107张竞品证据图；成功下载106张", { left: 750, top: 566, width: 420, height: 24 },
-    { fontSize: 17, bold: true, color: WHITE });
 
-  addBox(s, { left: 48, top: 628, width: 1160, height: 30 }, BLACK);
-  addText(s, "目标=全量进入；竞品=全量算分布后选典型/边界证据。两者进入Sol前都保留 store、product、category、role 与 selection_reasons。",
-    { left: 70, top: 634, width: 1116, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
+  addBox(s, { left: 48, top: 408, width: 560, height: 172 }, LIGHT_BLUE, "none", 8, "scope-user-view");
+  addText(s, "用户确认什么", { left: 70, top: 430, width: 220, height: 28 }, { fontSize: 20, bold: true, color: BLUE });
+  addText(s, "目标店铺 · 自动识别的重点品类 · 竞品可比范围 · 费用提示",
+    { left: 70, top: 478, width: 510, height: 70 }, { fontSize: 18, color: INK });
+
+  addBox(s, { left: 632, top: 408, width: 576, height: 172 }, PANEL, "none", 8, "scope-system-output");
+  addText(s, "系统产出什么", { left: 654, top: 430, width: 220, height: 28 }, { fontSize: 20, bold: true });
+  addText(s, "目标商品清单 · 图片位置清单 · 竞品证据清单 · 可追溯的范围快照",
+    { left: 654, top: 478, width: 526, height: 70 }, { fontSize: 18, color: MUTED });
+
+  addBox(s, { left: 48, top: 610, width: 1160, height: 42 }, BLACK);
+  addText(s, "范围确认后才启动付费分析；后续章节只能引用这次锁定的证据。",
+    { left: 72, top: 619, width: 1112, height: 24 }, { fontSize: 17, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
     `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
@@ -905,45 +896,44 @@ for (const demo of experience1Demos) {
   ]);
 }
 
-// Experience 2 workflow: synthesize, validate, review, and render.
+// Experience 2 workflow: turn selected images into reusable observations.
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "体验2流程②：成功下载的492张图片全部逐图分析，没有再抽一层", "Layer 3B · per-image analysis", pageNumber++,
-    "计划选入522张；30张高清下载失败后，386张目标图＋106张竞品图全部进入Sol逐图观察。");
+  addHeader(s, "体验2流程②：把入选图片变成可复用的逐图事实", "Layer 3B · image analysis flow", pageNumber++,
+    "系统负责高清图解析、缓存复用、质量校验和逐图分析；用户不需要逐张操作。");
 
-  const counts = [
-    ["计划范围", "522", "415目标＋107竞品"],
-    ["成功下载", "492", "386目标＋106竞品"],
-    ["下载失败", "30", "记录图片/店铺/商品/错误"],
-    ["逐图批次", "62", "每批最多8张"],
+  const nodes = [
+    ["01", "读取图片记录", "带入店铺、商品、品类和图片位置"],
+    ["02", "解析高清地址", "从缩略图地址定位可用原图"],
+    ["03", "复用共享缓存", "已有高清图直接使用，缺失项才下载"],
+    ["04", "通过质量门槛", "检查尺寸、格式和文件完整性"],
+    ["05", "分批调用Sol", "逐图读取画面，不依赖position猜朝向"],
+    ["06", "保存结构化事实", "记录观察、证据线索、优缺点与置信度"],
   ];
-  counts.forEach((item, index) => {
-    const left = 48 + index * 290;
-    addBox(s, { left, top: 166, width: 266, height: 142 }, index === 1 ? LIGHT_BLUE : PANEL, "none", 8, `count-${index}`);
-    addText(s, item[0], { left: left + 20, top: 184, width: 120, height: 22 }, { fontSize: 16, bold: true, color: index === 1 ? BLUE : MUTED });
-    addText(s, item[1], { left: left + 20, top: 218, width: 100, height: 54 }, { fontSize: 38, typeface: FONT_LATIN, bold: true, color: index === 1 ? BLUE : INK });
-    addText(s, item[2], { left: left + 114, top: 224, width: 132, height: 58 }, { fontSize: 16, color: INK });
+  for (let i = 0; i < 5; i += 1) {
+    flowArrow(s, { position: { left: 230 + i * 196, top: 250, width: 34, height: 42 } });
+  }
+  nodes.forEach((node, index) => {
+    flowNode(s, {
+      position: { left: 48 + index * 196, top: 178, width: 176, height: 190 },
+      step: node[0], title: node[1], detail: node[2], accent: index === 2, dark: index === 5,
+    });
   });
 
-  flowArrow(s, { text: "↓", position: { left: 600, top: 314, width: 48, height: 48 } });
-  addBox(s, { left: 48, top: 370, width: 740, height: 246 }, BLACK, "none", 8, "per-image-output");
-  addText(s, "每张图必须返回的可见观察", { left: 72, top: 392, width: 320, height: 30 }, { fontSize: 21, bold: true, color: WHITE });
-  addText(s, "scene · framing · pose_action · lighting · palette\nstyling · garment_display · first_image_type · brand_signal · text_overlay",
-    { left: 72, top: 438, width: 690, height: 66 }, { fontSize: 17, typeface: FONT_LATIN, color: "#D7D7D7" });
-  addText(s, "＋ visual_role · strengths · weaknesses · evidence_cues（至少2条）· confidence",
-    { left: 72, top: 528, width: 690, height: 28 }, { fontSize: 17, typeface: FONT_LATIN, color: "#8FD4F2" });
-  addText(s, "每批同时返回2–10个候选模式，并列支持图与反例图。批内图片ID缺失或重复，整批失败。",
-    { left: 72, top: 572, width: 690, height: 28 }, { fontSize: 16, color: WHITE });
+  addBox(s, { left: 48, top: 408, width: 560, height: 172 }, BLACK, "none", 8, "observation-fields");
+  addText(s, "每张图输出什么", { left: 70, top: 430, width: 220, height: 28 }, { fontSize: 20, bold: true, color: WHITE });
+  addText(s, "场景与构图 · 光线与色盘 · 动作与搭配 · 服装结构与材质 · 品牌信号 · 可见模特特征",
+    { left: 70, top: 478, width: 510, height: 74 }, { fontSize: 17, color: "#D7D7D7" });
 
-  addBox(s, { left: 814, top: 370, width: 394, height: 246 }, LIGHT_BLUE, "none", 8, "merged-evidence");
-  addText(s, "汇总证据包", { left: 836, top: 392, width: 220, height: 30 }, { fontSize: 21, bold: true, color: BLUE });
-  addText(s, "492张逐图观察\n全部批次候选模式\n图片—店铺—商品—角色映射\n15,107张竞品全量标签分布\n竞品证据图的入选原因\n报告范围与排除指标",
-    { left: 836, top: 438, width: 346, height: 158 }, { fontSize: 17, color: INK });
+  addBox(s, { left: 632, top: 408, width: 576, height: 172 }, LIGHT_BLUE, "none", 8, "observation-contract");
+  addText(s, "系统如何保证可复核", { left: 654, top: 430, width: 280, height: 28 }, { fontSize: 20, bold: true, color: BLUE });
+  addText(s, "每个判断附可见线索 · 看不清就标未知 · 失败图片显式记录 · 输入图片ID必须完整返回",
+    { left: 654, top: 478, width: 526, height: 74 }, { fontSize: 17, color: INK });
 
-  addBox(s, { left: 48, top: 636, width: 1160, height: 24 }, BLACK);
-  addText(s, "然后只进行1次Sol汇总调用，同时生成五个Section；总调用数=62次逐图批次＋1次汇总。",
-    { left: 72, top: 639, width: 1112, height: 18 }, { fontSize: 16, color: WHITE, alignment: "center" });
+  addBox(s, { left: 48, top: 610, width: 1160, height: 42 }, BLACK);
+  addText(s, "图片只逐图分析一次；后续五个章节复用同一事实池，不重复下载、不重复看图。",
+    { left: 72, top: 619, width: 1112, height: 24 }, { fontSize: 17, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
     `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
@@ -955,19 +945,19 @@ for (const demo of experience1Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "体验2流程③：五个Section共享同一证据包，不是五次独立分析", "Layer 3B · five-section logic", pageNumber++,
-    "一次Sol汇总响应同时返回五章。章节语义由section_id、中文标题和统一Prompt限定；观察字段分工不是程序硬编码。");
+  addHeader(s, "体验2流程③：同一事实池按章节裁剪，生成五章草稿", "Layer 3B · section flow", pageNumber++,
+    "每章只读取与问题相关的目录、逐图观察和竞品证据，再独立生成可审核草稿。");
 
   const rows = [
-    ["品牌视觉定位校准", "目标店铺逐图观察", "常用：brand_signal · palette · styling · scene", "Prompt语义约束；2–6条claim"],
-    ["商品展示分析", "目标店铺逐图观察", "常用：garment_display · framing · first_image_type", "Prompt语义约束；2–6条claim"],
-    ["店铺视觉审计", "目标店铺跨图观察", "常用：scene · lighting · palette · 一致性", "Prompt语义约束；2–6条claim"],
-    ["竞品视觉差距", "目标观察＋竞品分布＋106图", "6维全量占比＋10项高清观察", "三品牌点名＋品牌证据硬校验"],
-    ["视觉升级方向", "同一完整证据包", "把可见问题转成拍摄/图序/表达建议", "与前四章同时生成；无顺序依赖"],
+    ["品牌视觉定位校准", "店铺代表什么？", "全店品类结构＋目标店视觉事实", "品牌定位、核心风格与边界"],
+    ["商品展示分析", "商品怎样被展示？", "构图、动作、廓形、细节与材质", "主品类结论＋补充品类验证"],
+    ["店铺视觉审计", "视觉体系哪里失序？", "场景、光线、版面与可见模特", "优势、问题与一致性风险"],
+    ["竞品视觉差距", "与竞品差在哪里？", "可比分布＋对应品牌高清证据", "差距、机会点与适用边界"],
+    ["视觉升级方向", "下一步具体怎么改？", "前四章已验证的问题和证据", "优先级、拍摄规则与PLAN A/B"],
   ];
   const colX = [48, 314, 574, 892];
   const colW = [250, 244, 302, 316];
-  ["SECTION", "主要证据范围", "模型可用的判断视角", "真实约束"].forEach((title, index) => {
+  ["SECTION", "这一章回答什么", "系统读取什么", "草稿产出什么"].forEach((title, index) => {
     addBox(s, { left: colX[index], top: 164, width: colW[index], height: 46 }, index === 0 ? BLACK : PANEL);
     addText(s, title, { left: colX[index] + 14, top: 176, width: colW[index] - 28, height: 22 },
       { fontSize: 16, typeface: index === 0 ? FONT_LATIN : FONT, bold: true, color: index === 0 ? WHITE : INK });
@@ -981,7 +971,7 @@ for (const demo of experience1Demos) {
     });
   });
   addBox(s, { left: 48, top: 638, width: 1160, height: 24 }, BLACK);
-  addText(s, "重要：第五章不是读取前四章成品后再计算；五章在同一JSON响应里同时形成。",
+  addText(s, "每章独立保存草稿；五章完成后，执行摘要只整合已审核内容，不新增图片事实。",
     { left: 72, top: 641, width: 1112, height: 18 }, { fontSize: 16, bold: true, color: WHITE, alignment: "center" });
   addFooter(s);
   addNotes(s, [
@@ -994,16 +984,16 @@ for (const demo of experience1Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "体验2流程④：每条结论如何从观察进入可审核PDF", "Layer 3B · claim contract", pageNumber++,
-    "Sol写结论与推导；JSON Schema固定证据字段；程序阻断错误ID和竞品错配；用户逐章决定是否采用。");
+  addHeader(s, "体验2流程④：系统校验、用户审核，最后生成PDF", "Layer 3B · review flow", pageNumber++,
+    "系统先保证证据关系正确；用户再判断结论是否成立，不满意只重做对应章节。");
 
   const nodes = [
-    ["01", "Sol生成结论", "结论＋推导\n每章2–6条"],
-    ["02", "证据范围", "样本数＋筛选条件\n观察字段"],
-    ["03", "图片证据", "支持图＋反例图\n代表图"],
-    ["04", "程序硬校验", "五章齐全且不重复\nID必须来自输入"],
-    ["05", "人工审核", "满意=通过\n不满意=仅重跑该章"],
-    ["06", "本地排版PDF", "五章全通过后生成\n不再调用模型"],
+    ["01", "读取逐图事实", "使用已保存观察\n不重新看图"],
+    ["02", "生成章节草稿", "结论＋推导\n支持图＋反例图"],
+    ["03", "程序校验证据", "检查图片ID\n店铺和章节归属"],
+    ["04", "展示审核页面", "结论与图片同屏\n范围可以回查"],
+    ["05", "用户通过或退回", "满意则锁定\n不满意只重做本章"],
+    ["06", "生成最终PDF", "全部通过后\n本地排版输出"],
   ];
   for (let i = 0; i < 5; i += 1) {
     flowArrow(s, { position: { left: 230 + i * 196, top: 250, width: 34, height: 42 } });
@@ -1016,13 +1006,13 @@ for (const demo of experience1Demos) {
   });
 
   addBox(s, { left: 48, top: 408, width: 560, height: 196 }, LIGHT_BLUE, "none", 8, "hard-validation");
-  addText(s, "程序硬校验（失败就不出报告）", { left: 70, top: 430, width: 420, height: 28 }, { fontSize: 20, bold: true, color: BLUE });
-  addText(s, "• 每批逐图观察必须恰好覆盖输入图片ID\n• 五个section_id必须各出现一次\n• 每条claim引用的图片ID必须来自492张输入\n• competitive_gap必须分别点名三家竞品，且支持/代表图属于对应品牌",
+  addText(s, "系统负责什么", { left: 70, top: 430, width: 420, height: 28 }, { fontSize: 20, bold: true, color: BLUE });
+  addText(s, "• 检查图片ID是否来自本次任务\n• 检查目标店与竞品归属是否正确\n• 检查五个章节是否齐全且不重复\n• 保存每章审核状态和修订版本",
     { left: 70, top: 474, width: 510, height: 110 }, { fontSize: 17, color: INK });
 
   addBox(s, { left: 632, top: 408, width: 576, height: 196 }, PANEL, "none", 8, "soft-validation");
-  addText(s, "Prompt软约束＋人工审核", { left: 654, top: 430, width: 360, height: 28 }, { fontSize: 20, bold: true });
-  addText(s, "• 非竞品章节只用目标店铺证据，当前主要靠Prompt约束\n• 五章具体语义没有五套独立字段公式\n• 视觉升级章与前四章同时生成，不是程序串行推导\n• 不满意时携带原章节、审核意见、scope和完整evidence单章重跑",
+  addText(s, "用户负责什么", { left: 654, top: 430, width: 360, height: 28 }, { fontSize: 20, bold: true });
+  addText(s, "• 对照支持图和反例图检查结论\n• 判断推导是否符合业务认知\n• 通过可信章节，退回有问题章节\n• 五章全部通过后生成并下载PDF",
     { left: 654, top: 474, width: 526, height: 110 }, { fontSize: 17, color: MUTED });
 
   addFooter(s);
@@ -1037,19 +1027,19 @@ for (const demo of experience1Demos) {
 const experience2Demos = [
   {
     title: "体验2 Demo：先确认报告范围与证据契约", eyebrow: "Layer 3B · demo 1/5",
-    subtitle: "用户主动启动专项分析；界面提前说明目标范围、竞品选证据规则、五个Section与费用边界。",
-    imageName: "experience2-step1-start-report.png", step: "STEP 01 / 05", summary: "确认后再启动",
-    details: ["目标：Aloruh Tops＋Skirts", "竞品以全量分布为分母", "按钮明确提示会产生费用"],
+    subtitle: "界面先说明目标店铺、品类选择方式、竞品可比边界与费用提示；用户确认后才启动分析。",
+    imageName: "experience2-step1-start-report-v9.png", step: "STEP 01 / 05", summary: "确认后再启动",
+    details: ["选择目标店铺与报告范围", "确认系统自动选样方法", "理解竞品边界后启动"],
   },
   {
     title: "体验2 Demo：分析完成后先看统计与草稿", eyebrow: "Layer 3B · demo 2/5",
-    subtitle: "已完成任务展示386张目标图、15,107张竞品分母、106张高清证据及成本统计。",
+    subtitle: "任务页汇总分析进度、证据覆盖、缓存复用、实际费用和五章草稿，便于进入逐章审核。",
     imageName: "experience2-step2-completed-analysis.png", step: "STEP 02 / 05", summary: "打开已完成任务",
-    details: ["目标店铺全量逐图分析", "三家竞品分布＋高清证据", "PDF本地排版成本为0"],
+    details: ["先确认任务已完整结束", "检查证据覆盖与失败项", "打开五章草稿继续审核"],
   },
   {
     title: "体验2 Demo：逐条检查结论、推导与图片证据", eyebrow: "Layer 3B · demo 3/5",
-    subtitle: "每个Section先展示结论，再展示怎么得到、样本范围、观察字段、支持图与反例图。",
+    subtitle: "每个Section展示结论、推导、样本范围、观察字段及直接可见的支持图与反例图。",
     imageName: "experience2-step3-review-section.png", step: "STEP 03 / 05", summary: "审核Section证据链",
     details: ["结论与推导同屏", "图片直接展示，不只显示ID", "店铺归属与样本范围可回查"],
   },
@@ -1061,9 +1051,9 @@ const experience2Demos = [
   },
   {
     title: "体验2 Demo：五章通过后生成或下载最终PDF", eyebrow: "Layer 3B · demo 5/5",
-    subtitle: "第二步只读取已通过草稿进行本地排版；可浏览或下载PDF，不再调用模型。",
+    subtitle: "五章通过后，系统只读取同一任务草稿本地排版；最终PDF沿用样片视觉语言，页数由实际内容决定。",
     imageName: "experience2-step5-final-pdf.png", step: "STEP 05 / 05", summary: "交付最终PDF",
-    details: ["生成、浏览、下载三种动作", "排版0 Token / 0模型费用", "结论与证据进入固定版式"],
+    details: ["生成、浏览、下载三种动作", "排版0 Token / 0模型费用", "结论与证据进入内容驱动版式"],
   },
 ];
 for (const demo of experience2Demos) {
@@ -1074,14 +1064,14 @@ for (const demo of experience2Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "53 页成品由五个 Section 逐层收敛到行动方案", "PDF structure", pageNumber++,
-    "每个章节都回答一个不同的问题，并保留代表图、支持图、反例图与推导方法。");
+  addHeader(s, "内容驱动成品由五个 Section 逐层收敛到行动方案", "PDF structure", pageNumber++,
+    "当前完整任务映射为49页；页数由实际章节、证据和方案内容决定，不应把49页理解为49个结论。");
   const items = [
-    ["page-04.jpg", "品牌视觉定位校准", "P2–6", "我们到底像什么？"],
-    ["page-14.jpg", "商品展示分析", "P7–14", "商品信息是否可读？"],
-    ["page-22.jpg", "店铺视觉审计", "P15–25", "浏览体验哪里失序？"],
-    ["page-27.jpg", "竞品视觉差距", "P26–39", "差距来自什么系统？"],
-    ["page-44.jpg", "视觉升级方向", "P40–53", "下一步怎么改？"],
+    ["page-04.jpg", "品牌视觉定位校准", "P2–6", "店铺规模、重点品类与风格是什么？"],
+    ["page-14.jpg", "商品展示分析", "P7–14", "三类主分析＋六类交叉验证怎样展示商品？"],
+    ["page-22.jpg", "店铺视觉审计", "P15–25", "布景、图法与可见模特哪里失序？"],
+    ["page-27.jpg", "竞品视觉差距", "P26–35", "在TOPS与SKIRTS可比范围内差在哪里？"],
+    ["page-44.jpg", "视觉升级方向", "P36–49", "下一步怎么改？"],
   ];
   for (let i = 0; i < items.length; i += 1) {
     const x = 48 + i * 238;
@@ -1098,33 +1088,152 @@ for (const demo of experience2Demos) {
   addText(s, "范围与分母清楚 · 图片角色清楚 · 店铺归属清楚 · 结论能够回查到 image_id",
     { left: 280, top: 578, width: 890, height: 30 }, { fontSize: 17, color: MUTED });
   addFooter(s);
-  addNotes(s, [`${sources.repo}/app/report_pdf_pages.py`, `${sources.repo}/output/pdf/Aloruh纯视觉诊断-图片结论版.pdf`]);
+  addNotes(s, [`${sources.repo}/app/report_pdf_pages.py`, `${sources.repo}/output/pdf/Aloruh店铺视觉诊断-生产UI生成-20260827.pdf`]);
 }
 
 // Finished artifact showcase.
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "成品不是图册，而是一套可复用的视觉诊断语言", "Finished artifact", pageNumber++,
-    "从品牌母题、品类图法、店铺秩序、竞品系统，最终落到可执行的视觉系列方案。");
+  addHeader(s, "最终PDF沿用样片版式，并绑定已审核证据", "Finished artifact", pageNumber++,
+    "每一章都来自已锁定的图片事实、可比竞品范围和人工审核结果。");
   await addImage(s, "page-48.jpg", { left: 500, top: 156, width: 730, height: 411 }, { alt: "Hero image optimization example" });
   await addImage(s, "page-09.jpg", { left: 48, top: 156, width: 212, height: 119 }, { alt: "Tops visual analysis example" });
   await addImage(s, "page-28.jpg", { left: 276, top: 156, width: 212, height: 119 }, { alt: "Competitor visual system example" });
-  await addImage(s, "page-51.jpg", { left: 48, top: 295, width: 440, height: 247 }, { alt: "Final reference board example" });
-  metric(s, "53", "页视觉诊断", 48, 574, 160, true);
+  await addImage(s, "page-49.jpg", { left: 48, top: 295, width: 440, height: 247 }, { alt: "Brand atmosphere layer example" });
+  metric(s, "49", "当前成品页数", 48, 574, 160, true);
   metric(s, "5", "个可审核 Section", 230, 574, 200);
   addText(s, "成品文件", { left: 500, top: 594, width: 120, height: 22 }, { fontSize: 16, bold: true, color: MUTED });
-  addText(s, "Aloruh纯视觉诊断－图片结论版.pdf", { left: 620, top: 588, width: 580, height: 32 },
+  addText(s, "Aloruh店铺视觉诊断－生产UI生成－20260827.pdf", { left: 620, top: 588, width: 580, height: 32 },
     { fontSize: 18, bold: true });
   addFooter(s, "Fashion Scope · final report rendered and visually checked page by page");
-  addNotes(s, [`${sources.repo}/output/pdf/Aloruh纯视觉诊断-图片结论版.pdf`, `${sources.repo}/slides/fashion-scope/assets/page-53.jpg`]);
+  addNotes(s, [`${sources.repo}/output/pdf/Aloruh店铺视觉诊断-生产UI生成-20260827.pdf`, `${sources.repo}/slides/fashion-scope/assets/page-49.jpg`]);
+}
+
+// Reading guide 1: page roles.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "49页不是49个结论：先识别页面角色，再判断内容", "How to read the PDF · 1/3", pageNumber++,
+    "五章共25条核心claim；其余页面负责建立范围、展开证据、显示边界或转化为执行方案。");
+  const roles = [
+    ["01", "章节页", "P2 / 7 / 15 / 26 / 36", "只负责切换问题，不产生新结论"],
+    ["02", "事实页", "P3–5", "目录规模与品类占比来自全量数据"],
+    ["03", "结论页", "如P8 / 28 / 31 / 33 / 37", "必须能回指推导、分母与观察字段"],
+    ["04", "证据与边界页", "如P17 / 29–34 / 44–45", "图片说明claim，不等于新的统计结论"],
+    ["05", "建议与方案页", "P35 / 37–49", "把已验证问题转成图序与拍摄规则"],
+  ];
+  roles.forEach((row, index) => {
+    const x = 48 + index * 238;
+    addText(s, row[0], { left: x, top: 176, width: 54, height: 28 },
+      { fontSize: 17, typeface: FONT_LATIN, bold: true, color: BLUE }, `role-index-${index}`);
+    addRule(s, x, 218, 214, index === 2 ? BLUE : RULE, index === 2 ? 3 : 1);
+    addText(s, row[1], { left: x, top: 246, width: 214, height: 46 },
+      { fontSize: 25, bold: true }, `role-title-${index}`);
+    addText(s, row[2], { left: x, top: 318, width: 214, height: 44 },
+      { fontSize: 16, typeface: FONT_LATIN, bold: true, color: BLUE }, `role-pages-${index}`);
+    addText(s, row[3], { left: x, top: 386, width: 214, height: 92 },
+      { fontSize: 17, color: MUTED }, `role-detail-${index}`);
+  });
+  addBox(s, { left: 48, top: 548, width: 1152, height: 90 }, BLACK, "none", 8, "reading-rule");
+  addText(s, "阅读顺序", { left: 72, top: 574, width: 120, height: 28 }, { fontSize: 18, bold: true, color: WHITE });
+  addText(s, "先读结论和分母 → 再看支持图 → 再看反例边界 → 最后判断建议是否真的由前文推出",
+    { left: 210, top: 572, width: 950, height: 34 }, { fontSize: 20, bold: true, color: WHITE });
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/app/report_pdf_pages.py`,
+    `${sources.repo}/.tmp/whitepaper-20260827a-job.json`,
+    "Production UI generated PDF, 2026-08-27",
+  ]);
+}
+
+// Reading guide 2: section dependency chain.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "五个Section不是并列目录，而是一条从事实到行动的证据链", "How to read the PDF · 2/3", pageNumber++,
+    "前四章分别回答定位、商品、店铺与竞品问题；第五章只能综合前四章，不新增图片观察。");
+  const sections = [
+    ["S1", "品牌定位", "P2–6", "卖什么？\n已有何种视觉代码？"],
+    ["S2", "商品展示", "P7–14", "卖点是否被看清？\n多视角是否互补？"],
+    ["S3", "店铺审计", "P15–25", "背景、光线、图文\n是否形成一致系统？"],
+    ["S4", "竞品差距", "P26–35", "同品类比较中\n差的是哪套规则？"],
+    ["S5", "升级方向", "P36–49", "哪些规则应固化？\n图序怎样落地？"],
+  ];
+  sections.forEach((row, index) => {
+    const x = 48 + index * 238;
+    addBox(s, { left: x, top: 180, width: 214, height: 270 }, index === 4 ? BLACK : PANEL, "none", 8, `section-${index}`);
+    addText(s, row[0], { left: x + 18, top: 200, width: 48, height: 24 },
+      { fontSize: 15, typeface: FONT_LATIN, bold: true, color: index === 4 ? "#8FD4F2" : BLUE }, `section-index-${index}`);
+    addText(s, row[1], { left: x + 18, top: 244, width: 178, height: 42 },
+      { fontSize: 23, bold: true, color: index === 4 ? WHITE : INK }, `section-title-${index}`);
+    addText(s, row[2], { left: x + 18, top: 302, width: 178, height: 28 },
+      { fontSize: 15, typeface: FONT_LATIN, bold: true, color: index === 4 ? "#8FD4F2" : BLUE }, `section-pages-${index}`);
+    addText(s, row[3], { left: x + 18, top: 348, width: 178, height: 76 },
+      { fontSize: 16, color: index === 4 ? "#D7D7D7" : MUTED }, `section-question-${index}`);
+    if (index < sections.length - 1) {
+      addText(s, "→", { left: x + 210, top: 282, width: 28, height: 36 },
+        { fontSize: 25, typeface: FONT_LATIN, bold: true, color: BLUE, alignment: "center" }, `section-arrow-${index}`);
+    }
+  });
+  const metrics = [
+    ["2,848", "全量目录商品"], ["159", "目标店高清图"], ["15,107", "竞品标签分母"], ["190", "竞品高清复核图"], ["349", "Sol逐图观察"],
+  ];
+  metrics.forEach((row, index) => {
+    const x = 48 + index * 238;
+    addText(s, row[0], { left: x, top: 510, width: 214, height: 46 },
+      { fontSize: 31, typeface: FONT_LATIN, bold: true, color: index === 4 ? BLUE : INK }, `chain-metric-${index}`);
+    addText(s, row[1], { left: x, top: 562, width: 214, height: 30 },
+      { fontSize: 15, color: MUTED }, `chain-label-${index}`);
+  });
+  addFooter(s);
+  addNotes(s, [
+    `${sources.repo}/pipelines/analysis/report_analysis_runner.py`,
+    `${sources.repo}/pipelines/analysis/report_analysis_model.py`,
+    `${sources.repo}/.tmp/whitepaper-20260827a-job.json`,
+  ]);
+}
+
+// Reading guide 3: verified fixes and remaining data boundaries.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "逐页查验已闭环四类错配，剩余限制来自数据边界", "How to read the PDF · 3/3", pageNumber++,
+    "以下结论来自生产UI重新生成的49页PDF与页面配置、真实claim及嵌入图片的逐页对照。");
+  const risks = [
+    ["P14", "品类图文已对齐", "DRESSES、TOPS、BLOUSES分别绑定对应图片，以及各自的构图、动作、卖点、场景和搭配。"],
+    ["P16 / P22 / P24", "统计口径已统一", "场景、首图类型与可见模特按159张目标图或79张position 1确定性统计，明确分母和单位。"],
+    ["P44 / P45", "示例语义已澄清", "明确为图位职责与拍摄规则参考，不再声称同款改造前后，也不伪造点击效果。"],
+    ["P48 / P49", "PLAN A/B已分层", "A只讲商品信息层；B只用真实生活方式场景讲品牌氛围层，两套图片不再重复。"],
+  ];
+  risks.forEach((row, index) => {
+    const y = 170 + index * 106;
+    addText(s, row[0], { left: 48, top: y + 4, width: 178, height: 30 },
+      { fontSize: 18, typeface: FONT_LATIN, bold: true, color: BLUE }, `risk-pages-${index}`);
+    addText(s, row[1], { left: 238, top: y, width: 240, height: 34 },
+      { fontSize: 22, bold: true }, `risk-title-${index}`);
+    addText(s, row[2], { left: 500, top: y, width: 700, height: 62 },
+      { fontSize: 17, color: MUTED }, `risk-detail-${index}`);
+    addRule(s, 48, y + 78, 1152, "#D7D9DD");
+  });
+  addBox(s, { left: 48, top: 594, width: 1152, height: 58 }, LIGHT_BLUE, "none", 8, "reuse-note");
+  addText(s, "仍保留的数据边界", { left: 70, top: 613, width: 190, height: 24 }, { fontSize: 17, bold: true, color: BLUE });
+  addText(s, "不补人群画像、代表红人或敏感属性；竞品只比较12维完整的TOPS与SKIRTS；不把视觉观察写成CTR/CVR因果。",
+    { left: 242, top: 611, width: 920, height: 28 }, { fontSize: 17, color: INK });
+  addFooter(s, "Fashion Scope · 49-page production UI PDF · page-by-page QA · 2026-08-27");
+  addNotes(s, [
+    "Production UI: https://regardsjob.eastasia.cloudapp.azure.com/fashion-scope/#reports",
+    `${sources.repo}/app/report_pdf_pages.py`,
+    `${sources.repo}/.tmp/whitepaper-20260827a-job.json`,
+    "UI-generated PDF SHA-256 8A8040A9282C069ECF2469E9937B6EC808200FC17E0304081AE1AB84D5DC9D17",
+  ]);
 }
 
 // Appendix A1: complete Terra prompt, general rules and dimensions 1–3.
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "附录A1/8：Terra完整Prompt — 通用规则＋维度1–3", "Prompt appendix · code verbatim", pageNumber++,
+  addHeader(s, "附录A1/9：Terra完整Prompt — 通用规则＋维度1–3", "Prompt appendix · code verbatim", pageNumber++,
     "以下文本来自_taxonomy_prompt()；仅为适配页面人工换行，单词与标签未改写。");
   addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 246 }, "统一规则（完整）", [
     "Analyze every numbered fashion image using exactly the controlled codes below. Use visible",
@@ -1150,7 +1259,7 @@ for (const demo of experience2Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "附录A2/8：Terra完整Prompt — 维度4–8", "Prompt appendix · code verbatim", pageNumber++,
+  addHeader(s, "附录A2/9：Terra完整Prompt — 维度4–8", "Prompt appendix · code verbatim", pageNumber++,
     "这些维度行紧接在统一规则后面；它们是允许返回的代码集合，不是五次独立请求。");
   addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 486 }, "受控标签字典 04–08 / 15", [
     "occasion: CASUAL, GOING_OUT, PARTY, DATE_NIGHT, VACATION, BEACH, POOL, WEDDING_GUEST, FESTIVAL, COMMUTE, FORMAL, HOME, UNKNOWN",
@@ -1171,7 +1280,7 @@ for (const demo of experience2Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "附录A3/8：Terra完整Prompt — 维度9–12", "Prompt appendix · code verbatim", pageNumber++,
+  addHeader(s, "附录A3/9：Terra完整Prompt — 维度9–12", "Prompt appendix · code verbatim", pageNumber++,
     "长标签行按页面宽度自动换行；标签拼写与代码完全一致。");
   addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 486 }, "受控标签字典 09–12 / 15", [
     "material_texture: KNIT, LACE, SATIN_LIKE, SILK_LIKE, DENIM, COTTON_LIKE, CHIFFON, MESH, SEQUIN, LEATHER_LIKE, RIBBED, CROCHET, PLEATED, UNKNOWN",
@@ -1190,7 +1299,7 @@ for (const demo of experience2Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "附录A4/8：Terra完整Prompt — 维度13–15＋请求封装", "Prompt appendix · complete request", pageNumber++,
+  addHeader(s, "附录A4/9：Terra完整Prompt — 维度13–15＋请求封装", "Prompt appendix · complete request", pageNumber++,
     "至此通用规则与15个维度已完整列出；同一请求还会为每张图片追加上下文，并使用严格JSON Schema。");
   addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 264 }, "受控标签字典 13–15 / 15", [
     "lighting: SOFT_DIFFUSED, NATURAL_DAYLIGHT, HARD_DIRECT, DIRECT_FLASH, WARM_AMBIENT, COOL_AMBIENT, LOW_KEY, HIGH_KEY, MIXED_LIGHT, UNKNOWN",
@@ -1220,7 +1329,7 @@ for (const demo of experience2Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "附录A5/8：体验1 Sol完整Prompt", "Prompt appendix · experience 1", pageNumber++,
+  addHeader(s, "附录A5/9：体验1 Sol完整Prompt", "Prompt appendix · experience 1", pageNumber++,
     "代码原文来自detailed_visual_analysis.py；固定筛选条件在末尾以JSON拼接。");
   addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 330 }, "_prompt(filters) 完整文本", [
     "你是一名电商女装视觉策略负责人。请对同一固定维度组合下的多店铺高清商品图做精细视觉分析，输出中文。",
@@ -1240,49 +1349,72 @@ for (const demo of experience2Demos) {
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "附录A6/8：体验2逐图 Sol完整Prompt", "Prompt appendix · experience 2 observations", pageNumber++,
+  addHeader(s, "附录A6/9：体验2逐图 Sol完整Prompt", "Prompt appendix · experience 2 observations", pageNumber++,
     "该Prompt在每个8图批次重复使用；图片上下文保留角色、品牌和竞品证据入选原因。");
   addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 318 }, "_image_prompt() 完整文本", [
     "你是女装品牌视觉诊断分析师。逐张分析高清商品图，先记录肉眼可见事实，再写优缺点。",
     "不得使用销量、曝光、点击、转化或ROI，不得推断敏感属性。旧分类标签仅是上下文，",
     "不能替代本次观察。证据线索必须能在图片中复核。竞品图只用于对照，不代表目标店铺。",
-    "竞品图由全量视觉维度分布分层选出；selection_reasons说明其典型或边界证据角色。",
+    "竞品图只从已完成12维标签覆盖的可比品类全量分布中分层选出；",
+    "未覆盖品类不得推断。selection_reasons说明其典型或边界证据角色。",
+    "模特相关字段只记录实际可见的在场人数、面部可见性、发型、妆容表现、表情和视线；",
+    "不可见时写不可观察。禁止推断年龄、种族、国籍、身高、体型尺寸、健康或吸引力。",
+    "产品字段要分别记录廓形、可见设计细节、可见材质纹理和商品展示完整度。",
   ], true);
   addCodeBlock(s, { left: 48, top: 506, width: 1160, height: 138 }, "每图追加上下文", [
     "{image_id, store_id, product_id, category, role, selection_reasons}",
     "＋ input_image(detail=high)",
-    "严格Schema要求每张图返回10项observable、visual_role、strengths、weaknesses、evidence_cues、confidence。",
+    "严格Schema要求每张图返回18项observable、visual_role、strengths、weaknesses、evidence_cues、confidence。",
   ]);
   addFooter(s);
   addNotes(s, [`${sources.repo}/pipelines/analysis/report_analysis_model.py`]);
 }
 
-// Appendix A7: complete Experience 2 synthesis prompt.
+// Appendix A7: actual per-section synthesis prompt.
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "附录A7/8：体验2五章汇总 Sol完整Prompt", "Prompt appendix · experience 2 synthesis", pageNumber++,
-    "该Prompt只调用一次；末尾拼接scope JSON与完整EVIDENCE JSON，五章在同一响应中返回。");
-  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 482 }, "_synthesis_prompt(scope) 完整文本", [
-    "基于逐图观察与批次模式，生成模仿品牌视觉诊断成品PDF结构的专项分析草稿。每条结论必须说明推导方法，",
-    "列支持图、反例图、代表图、样本数和观察字段；不得引用未提供的图片ID。目标店铺全量图片用于结论，",
-    "竞品高清分层证据集只用于视觉差距。竞品模式判断必须以competitor_evidence中的全量维度分布为分母，",
-    "高清代表图只用于复核典型模式与边界反例，不得把代表图数量冒充全量占比。competitive_gap必须分别包含",
-    "Princess Polly、Motel Rocks、PrettyLittleThing三家品牌，每家至少一条独立结论；结论或推导必须写出品牌名，",
-    "支持图或代表图必须来自该品牌。不得写销售、流量、点击、转化或ROI结论。五个章节必须各出现一次：",
-    "brand_positioning=品牌视觉定位校准；product_display=商品展示分析；store_visual_audit=店铺视觉审计；",
-    "competitive_gap=竞品视觉差距；visual_upgrade=视觉升级方向。范围：{scope JSON}",
-    "EVIDENCE:{complete evidence JSON}",
+  addHeader(s, "附录A7/9：体验2实际单章汇总Prompt", "Prompt appendix · actual section synthesis", pageNumber++,
+    "生产任务不再发送6MB总包；五章分别调用同一个基础Prompt，并各自追加章节要求和裁剪后的证据。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 482 }, "_section_prompt(scope, section_id) 完整基础文本", [
+    "所有入选高清图已完成逐图观察。现在只生成一个视觉诊断章节，输出中文，",
+    "不得引用未提供的图片ID。每条结论必须说明推导方法，并列出支持图、反例图、",
+    "代表图、样本数、筛选条件和观察字段。不得写销量、曝光、点击、转化或ROI，",
+    "不得推断敏感属性、人群画像或代表红人。",
+    "章节={section_id}({SECTION_TITLES[section_id]})。要求：{requirements[section_id]}",
+    "范围：{scope JSON}",
+    "EVIDENCE:{按章节角色与字段裁剪后的 evidence JSON}",
   ], true);
   addFooter(s);
   addNotes(s, [`${sources.repo}/pipelines/analysis/report_analysis_model.py`]);
 }
 
-// Appendix A8: complete section revision prompt.
+// Appendix A8: actual section requirements and executive-summary prompt.
 {
   const s = p.slides.add();
   s.background.fill = WHITE;
-  addHeader(s, "附录A8/8：单章修订 Sol完整Prompt", "Prompt appendix · section revision", pageNumber++,
+  addHeader(s, "附录A8/9：五章要求＋执行摘要Prompt", "Prompt appendix · section requirements", pageNumber++,
+    "这五段requirements是真实发送内容；章节完成后再用一个独立Prompt压缩为2–4条执行摘要。");
+  addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 322 }, "requirements[section_id]（生产原文）", [
+    "brand_positioning：说明店铺基本信息、全量重点品类、视觉风格划分与品牌信号；商品数和品类占比可引用全量目录，视觉判断只能引用目标店逐图证据。",
+    "product_display：分别覆盖前三重点品类，并用补充品类交叉验证产品卖点、动作、常见搭配、廓形、设计细节、材质纹理和图片位互补。不得按position顺序猜正背面。",
+    "store_visual_audit：覆盖拍摄布景、拍摄风格、光线、构图、图文叠加和可见模特画像；模特只记录人数、面部可见性、发型、妆容、表情和视线。",
+    "competitive_gap：分别写Princess Polly、Motel Rocks、PrettyLittleThing，至少每家一条独立结论；支持图或代表图必须属于该品牌。全量标签分布是统计分母，高清图只复核典型与边界。",
+    "visual_upgrade：只根据前四章已验证结论提出升级方向，并复用其有效图片ID；每条建议要说明对应问题、证据和预期视觉改进，不得杜撰新观察。",
+  ], true);
+  addCodeBlock(s, { left: 48, top: 506, width: 1160, height: 138 }, "执行摘要Prompt（生产原文）", [
+    "根据五个已验证章节写2至4条中文执行摘要。不得增加新事实或图片ID。",
+    "SECTIONS={五个已完成section JSON}",
+  ]);
+  addFooter(s);
+  addNotes(s, [`${sources.repo}/pipelines/analysis/report_analysis_model.py`]);
+}
+
+// Appendix A9: complete section revision prompt.
+{
+  const s = p.slides.add();
+  s.background.fill = WHITE;
+  addHeader(s, "附录A9/9：单章修订 Sol完整Prompt", "Prompt appendix · section revision", pageNumber++,
     "用户判定某章不满意时，只重跑该section；其他四章不重新分析，已完成逐图观察也不重做。");
   addCodeBlock(s, { left: 48, top: 164, width: 1160, height: 376 }, "revise(section, suggestion, evidence, scope) 完整文本", [
     "根据审核意见重新分析一个视觉诊断章节。只能使用给定证据，不得编造图片ID。",
@@ -1310,13 +1442,13 @@ for (const demo of experience2Demos) {
   const discussionPage = pageNumber++;
   addText(s, "DISCUSSION", { left: 56, top: 44, width: 280, height: 22 },
     { fontSize: 13, typeface: FONT_LATIN, bold: true, color: "#8FD4F2" });
-  addText(s, "下一步，应该把它变成什么？", { left: 56, top: 92, width: 820, height: 72 },
+  addText(s, "下一步，哪些投入值得做？", { left: 56, top: 92, width: 820, height: 72 },
     { fontSize: 42, bold: true, color: WHITE });
   const qs = [
-    ["01", "采集边界", "哪些站点继续自动化，哪些登录与验证码环节必须保留人工确认？"],
-    ["02", "维度体系", "现有15维是否足够支持视觉决策，还是需要新增品牌专属维度？"],
-    ["03", "使用分工", "探索型组合分析与报告型整体分析，分别应该由谁、在何时使用？"],
-    ["04", "交付闭环", "PDF止于结论，还是继续连接拍摄brief、图序规范与效果KPI？"],
+    ["01", "竞品覆盖", "是否补齐三家竞品DRESSES、BLOUSES等品类的12维标签，再扩展同品类比较？"],
+    ["02", "样本规模", "固定抽样是否足够，还是应根据品类规模、视觉差异和结论风险动态扩样？"],
+    ["03", "交付闭环", "PDF止于结论，还是继续连接拍摄brief、图序规范与选图验收？"],
+    ["04", "效果验证", "如何把视觉规范版本与后续点击、转化或退货指标连接，形成可回看实验？"],
   ];
   qs.forEach((q, i) => {
     const y = 204 + i * 106;

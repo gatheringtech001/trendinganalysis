@@ -264,17 +264,16 @@ class ReportAnalysisJobs:
         self.active_job_id = None
 
     def submit(self, payload):
-        target_store, categories = self._validate(payload)
+        scope = self._validate(payload)
         with self.lock:
             if self.active_job_id:
                 raise AnalysisBusyError("已有报告专项分析或修订任务正在运行")
             job_id = uuid.uuid4().hex
+            scope["sampling_seed"] = job_id
             job = {
                 "job_id": job_id, "status": "queued", "stage": "queued",
                 "progress": 0, "created_at": self._now(), "updated_at": self._now(),
-                "scope": {
-                    "target_store": target_store, "categories": categories,
-                },
+                "scope": scope,
             }
             self.jobs[job_id] = job
             self.active_job_id = job_id
@@ -339,7 +338,9 @@ class ReportAnalysisJobs:
         self._update(job_id, status="running", stage="selecting_images", progress=2)
         args = report_analysis_args(
             db=self.db_path, output=output, target_store=scope["target_store"],
-            categories=scope["categories"],
+            categories=None, key_category_limit=scope["key_category_limit"],
+            sample_per_category=scope["sample_per_category"],
+            sample_seed=scope["sampling_seed"],
         )
         try:
             result_dir = self.runner(
@@ -394,17 +395,30 @@ class ReportAnalysisJobs:
     @staticmethod
     def _validate(payload):
         if not isinstance(payload, dict) or set(payload) - {
-            "target_store", "categories",
+            "target_store", "category_mode", "key_category_limit", "sample_per_category",
         }:
             raise ValueError("报告专项分析请求格式不正确")
         target = payload.get("target_store", "aloruh_shein")
-        categories = payload.get("categories", ["TOPS", "SKIRTS"])
+        category_mode = payload.get("category_mode", "auto")
+        key_category_limit = payload.get("key_category_limit", 3)
+        sample_per_category = payload.get("sample_per_category", 20)
         if target != "aloruh_shein":
             raise ValueError("当前成品报告模板只支持Aloruh(SHEIN)")
-        if (not isinstance(categories, list) or not categories
-                or set(categories) - {"TOPS", "SKIRTS"}):
-            raise ValueError("报告品类只支持TOPS与SKIRTS")
-        return target, list(dict.fromkeys(categories))
+        if category_mode != "auto":
+            raise ValueError("报告品类范围只支持自动识别重点品类")
+        if (not isinstance(key_category_limit, int)
+                or isinstance(key_category_limit, bool)
+                or not 1 <= key_category_limit <= 3):
+            raise ValueError("重点品类数量必须在1到3之间")
+        if (not isinstance(sample_per_category, int)
+                or isinstance(sample_per_category, bool)
+                or not 1 <= sample_per_category <= 40):
+            raise ValueError("每个重点品类抽样数量必须在1到40之间")
+        return {
+            "target_store": target, "category_mode": category_mode,
+            "key_category_limit": key_category_limit,
+            "sample_per_category": sample_per_category,
+        }
 
     def _update_revision(self, job_id, **values):
         with self.lock:
