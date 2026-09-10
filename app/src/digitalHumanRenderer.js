@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { accessoryVisible, garmentVisible, jointRotation } from "./digitalHuman.js";
+import { accessoryVisible, garmentVisible } from "./digitalHuman.js";
+import { createRigPose } from "./digitalHumanRig.js";
 import { disposeTree, makeStage } from "./digitalHumanScene.js";
 
 function lights(scene) {
@@ -23,14 +24,10 @@ function lights(scene) {
 function dress(model, look) {
   model.rotation.y = look.turn * Math.PI / 180;
   model.traverse((node) => {
-    if (node.name.startsWith("joint_")) {
-      const delta = new THREE.Quaternion().setFromEuler(new THREE.Euler(...jointRotation(node.name, look)));
-      node.quaternion.copy(node.userData.restRotation).multiply(delta);
-    }
     if (node.name.startsWith("garment_")) node.visible = garmentVisible(node.name, look.outfit);
     if (node.name.startsWith("accessory_")) node.visible = accessoryVisible(node.name, look.accessories);
-    if (node.material?.name === "GarmentColor") node.material.color.set(look.color);
-    if (node.material?.name === "BottomColor") node.material.color.set(look.bottomColor);
+    if (["GarmentColor", "JacketTexture"].includes(node.material?.name)) node.material.color.set(look.color);
+    if (["BottomColor", "TrouserTexture"].includes(node.material?.name)) node.material.color.set(look.bottomColor);
   });
 }
 
@@ -60,8 +57,8 @@ export function createStudio(host, onError) {
   controls.maxDistance = 8;
   controls.maxPolarAngle = Math.PI / 2 + .03;
   const resetCamera = () => {
-    camera.position.set(2.6, 1.9, 4.6);
-    controls.target.set(0, .98, 0);
+    camera.position.set(1.3, 1.48, 4.15);
+    controls.target.set(0, .94, 0);
     controls.update();
   };
   resetCamera();
@@ -72,7 +69,7 @@ export function createStudio(host, onError) {
   scene.environment = environment.texture;
   room.dispose();
   generator.dispose();
-  const state = { disposed: false, model: null, stage: null, sceneKind: null };
+  const state = { disposed: false, model: null, stage: null, sceneKind: null, pose: null };
   const resize = new ResizeObserver(() => {
     const { width, height } = host.getBoundingClientRect();
     if (!width || !height) return;
@@ -92,16 +89,17 @@ export function createStudio(host, onError) {
     if (state.disposed) { disposeTree(gltf.scene); return; }
     state.model = gltf.scene;
     state.model.traverse((node) => {
-      if (node.name.startsWith("joint_")) node.userData.restRotation = node.quaternion.clone();
       if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; }
     });
     scene.add(state.model);
+    state.pose = createRigPose(state.model);
   });
   return {
     ready, resetCamera,
     update(look) {
       if (state.disposed || !state.model) return;
       dress(state.model, look);
+      state.pose(look);
       if (state.sceneKind === look.scene) return;
       if (state.stage) { scene.remove(state.stage); disposeTree(state.stage); }
       state.sceneKind = look.scene;
@@ -117,7 +115,8 @@ export function createStudio(host, onError) {
     async exportScene(look, product) {
       const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
       scene.userData = { look, reference: product ? { store: product.store_id, id: product.product_id, title: product.title } : null,
-        garmentType: "illustrative-template", generator: "Fashion Scope / Blender" };
+        garmentType: look.outfit === "trousers" ? "supplied-character-outfit" : "illustrative-template",
+        characterSource: "User-supplied Hi3D businesswoman adapted from SANHUA presenter", generator: "Fashion Scope / Blender" };
       const data = await new GLTFExporter().parseAsync(scene, { binary: true, onlyVisible: true });
       download(new Blob([data], { type: "model/gltf-binary" }), "fashion-scope-look.glb");
     },

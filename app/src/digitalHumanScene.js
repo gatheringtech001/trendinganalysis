@@ -3,12 +3,18 @@ import * as THREE from "three";
 export function disposeTree(root) {
   const geometries = new Set();
   const materials = new Set();
+  const textures = new Set();
+  const skeletons = new Set();
   root.traverse((node) => {
     if (node.geometry) geometries.add(node.geometry);
     if (node.material) (Array.isArray(node.material) ? node.material : [node.material]).forEach((m) => materials.add(m));
+    if (node.isSkinnedMesh) skeletons.add(node.skeleton);
   });
+  materials.forEach((value) => Object.values(value).forEach((entry) => { if (entry?.isTexture) textures.add(entry); }));
   geometries.forEach((value) => value.dispose());
   materials.forEach((value) => value.dispose());
+  textures.forEach((value) => value.dispose());
+  skeletons.forEach((value) => value.dispose());
 }
 
 function block(group, options) {

@@ -65,13 +65,13 @@ export default function DigitalHuman({ store }) {
   const ready = status === "ready";
   return <div className="dh-studio">
     <div className="dh-intro"><div><span className="dh-eyebrow">FASHION SCOPE / VIRTUAL STUDIO</span>
-      <h2>让搭配进入三维空间<span>Blender 原型</span></h2>
-      <p>服装、场景与姿态，在同一张画布中探索。</p></div>
+      <h2>让搭配进入三维空间<span>花花 · 骨骼数字人</span></h2>
+      <p>沿用三花项目中的角色形象，探索服装、场景与模特姿态。</p></div>
       <a href={`${import.meta.env.BASE_URL}digital-human/mannequin.blend`} download>下载 Blender 源模型 ↗</a>
     </div>
     <div className="dh-workspace">
       <aside className="dh-panel dh-wardrobe">
-        <div className="dh-section-title"><h3>01 / 造型衣橱</h3><span>3D 模板</span></div>
+        <div className="dh-section-title"><h3>01 / 造型衣橱</h3><span>原款 / 示意款</span></div>
         <Choices label="服装模板" options={OUTFITS} value={look.outfit} onChange={(value) => change("outfit", value)} />
         <div className="dh-colors"><label>主服装色<input aria-label="主服装色" type="color" value={look.color} onChange={(event) => change("color", event.target.value)} /></label>
           {look.outfit !== "dress" && <label>下装颜色<input aria-label="下装颜色" type="color" value={look.bottomColor} onChange={(event) => change("bottomColor", event.target.value)} /></label>}</div>
@@ -103,6 +103,6 @@ export default function DigitalHuman({ store }) {
     </div>
     <div className="dh-reference"><span>当前商品参考</span><strong>{product?.title || "未选择 · 可从左侧店铺灵感库关联商品"}</strong>{product && <button onClick={() => { setProduct(null); setNotice(""); }}>清除关联</button>}</div>
     {notice && <p role="status" className="dh-notice">{notice}</p>}
-    <p className="dh-boundary">原型说明：数字人和服装由 Blender 建模，当前为关节驱动的款式示意。商品图仅作参考，不代表真实商品试穿；尚未接入服装重建、布料仿真与碰撞检测，极端姿势可能穿模。</p>
+    <p className="dh-boundary">角色来自你在三花项目中提供的 Hi3D 卡通商务女性，保留原贴图与 20 骨骼蒙皮；商务套装为原款，长裙为新建示意款。原款调色叠加于原贴图。店铺商品仅作参考，尚未完成商品服装重建、布料仿真与碰撞检测，部分姿势可能穿模。</p>
   </div>;
 }
