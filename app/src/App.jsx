@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import { api, stores } from "./api";
 import Icon from "./icons";
 import Overview from "./Overview";
@@ -10,12 +10,15 @@ import { CompetitorAnalysisView, StoreAnalysisView } from "./AnalysisViews";
 import ImageDimensions from "./ImageDimensions";
 import Reports from "./Reports";
 
+const DigitalHuman = lazy(() => import("./DigitalHuman.jsx"));
+
 const views = {
   overview: { label: "总览", icon: "overview" },
   products: { label: "商品与SKU", icon: "products" },
   images: { label: "图片索引", icon: "images" },
   dimensions: { label: "维度分析", icon: "images" },
   reports: { label: "视觉报告", icon: "sources" },
+  "digital-human": { label: "数字人视觉", icon: "images" },
   engagement: { label: "热度与评论", icon: "engagement" },
   profile: { label: "店铺剖析", icon: "overview" },
   comparison: { label: "竞品分析", icon: "engagement" },
@@ -99,6 +102,7 @@ export default function App() {
 
         {error && <div className="error-banner">{error}</div>}
         {!summary && !error && <div className="loading">正在载入研究快照…</div>}
+        {active === "digital-human" && <Suspense fallback={<div className="loading">正在载入数字人工作台…</div>}><DigitalHuman store={store} /></Suspense>}
         {summary && active === "overview" && <Overview store={store} summary={summary} />}
         {summary && active === "products" && <Explorer mode="products" store={store} />}
         {summary && active === "images" && <Explorer mode="images" store={store} />}
