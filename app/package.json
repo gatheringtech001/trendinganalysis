@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 4181",
     "build": "vite build --base=./",
-    "test": "python -m unittest test_server.py -v"
+    "test": "node --test src/digitalHuman.test.mjs && python -m unittest test_server.py -v"
   },
   "dependencies": {
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "three": "0.185.1"
   },
   "devDependencies": {
     "vite": "^7.1.2"
